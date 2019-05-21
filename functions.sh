@@ -28,6 +28,9 @@ then
 	SOX=$(which sox)
 fi
 
+stty -icanon min 1
+COMMAND_KEY_STEP=" "
+
 function info()
 {
 	echo "$*" 1>&2
@@ -137,10 +140,17 @@ function wait_after_command()
 
 function wait_before_char()
 {
-	AMOUNT=$((MIN_WAIT_CHAR+RANDOM))
-	[ $AMOUNT -gt $MAX_WAIT_CHAR ] && AMOUNT=$MAX_WAIT_CHAR
-	MS=$((AMOUNT%1000))
-	sleep 0.$MS
+	while [ -n "$STOPPED" -a "${STEP_ON:-0}" -lt 1 ]; do
+		command_check
+	done
+	[ -n "$STEP_ON" ] && STEP_ON=$((STEP_ON-1))
+	TRY_1_ON_10=$((RANDOM%100))
+	if [ $TRY_1_ON_10 -ge 70 ]; then
+		AMOUNT=$((MIN_WAIT_CHAR+RANDOM))
+		[ $AMOUNT -gt $MAX_WAIT_CHAR ] && AMOUNT=$MAX_WAIT_CHAR
+		MS=$((AMOUNT%1000))
+		sleep 0.$MS
+	fi
 }
 
 : "
@@ -211,14 +221,12 @@ function sound_tap()
 
 function to_operator()
 {
+	command_check
 	CH="$1"
 	if [ $MAX_WAIT_CHAR -eq 0 ];then
 		BUFFER+="$CH"
 	else
-		TRY_1_ON_10=$((RANDOM%100))
-		if [ $TRY_1_ON_10 -ge 70 ]; then
-			wait_before_char
-		fi
+		wait_before_char
 		#sound_tap
 		to_operator_direct "$CH"
 	fi
@@ -337,6 +345,26 @@ function create_dir()
 function clear_screen()
 {
 	send_command clear
+}
+
+
+function command_check()
+{
+	read -t 0.00001 COMMAND
+	if [ -n "$COMMAND" ]; then
+		command_exec "$COMMAND"
+	fi
+}
+
+function command_exec()
+{
+	debug "Executing command: $COMMAND"
+	case "$COMMAND" in
+	s) STOPPED=1; debug "Stopped";;
+	S) unset STOPPED; debug "Restarted";;
+	[0-9]) COMMAND_NUM=$COMMAND$COMMAND_NUM; debug "Num: $COMMAND_NUM";;
+	+) STEP_ON=${COMMAND_NUM:-1}; debug "Step on: $STEP_ON";;
+	esac
 }
 
 function pause()
