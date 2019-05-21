@@ -22,6 +22,8 @@ if [ -z "$TUTAUT" ]; then
 fi
 BACKSPACES="\\h\\h\\h\\h\\h\\h\\h\\h\\h\\h"
 BACKSPACES_NOT_ESCAPED=""
+FILE_INFO=/tmp/tutaut.info
+FILE_DEBUG=/tmp/tutaut.debug
 
 if which sox 2>/dev/null
 then
@@ -31,17 +33,40 @@ fi
 stty -icanon min 1
 COMMAND_KEY_STEP=" "
 
+function now()
+{
+	TIME_NOW=$(date +%s%N)
+	TIME_START=${TIME_START:-$TIME_NOW}
+	TIME_ELAPSED=$((TIME_NOW-TIME_START))
+}
+
 function info()
 {
+	now
 	echo "$*" 1>&2
+	echo "$TIME_ELAPSED:info:$*" >>$FILE_INFO
 }
 
 function debug()
 {
 	if [ -n "$DEBUG" ]
 	then
+		now
 		echo "$*" 1>&2
+		echo "$TIME_ELAPSED:$*" >>$FILE_DEBUG
 	fi
+}
+
+work_begin()
+{
+	TIME_START=
+	now
+	echo "$TIME_ELAPSED:begin:" >$FILE_INFO
+}
+
+work_end()
+{
+	echo "$TIME_ELAPSED:end:" >>$FILE_INFO
 }
 
 function operator()
@@ -61,6 +86,8 @@ function operator()
 		OPERATORS[$OPERATOR]=1
 	fi
 	debug "switch to operator $OPERATOR"
+	now
+	echo "$TIME_ELAPSED:operator:$OPERATOR" >>$FILE_INFO
 }
 
 function launch_terminal_on_new_session()
@@ -486,3 +513,5 @@ function print_file()
 {
 	send_command "cat $1"
 }
+
+now
