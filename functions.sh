@@ -23,6 +23,11 @@ fi
 BACKSPACES="\\h\\h\\h\\h\\h\\h\\h\\h\\h\\h"
 BACKSPACES_NOT_ESCAPED=""
 
+if which sox 2>/dev/null
+then
+	SOX=$(which sox)
+fi
+
 function info()
 {
 	echo "$*" 1>&2
@@ -138,6 +143,72 @@ function wait_before_char()
 	sleep 0.$MS
 }
 
+: "
+  501  play -n synth brownnoise synth pinknoise mix synth sine amod 0.3 10
+  502  play -V -r 48000 -n synth sin 1000 vol -60dB
+  504  play -V -r 44100 -n synth 30 sin 20+20000
+  505  sox -V -r 44100 -n -n synth 30 sin 0+19000 sin 1000+20000 remix 1,2 spectrogram -o imd-ccif-sweep.png
+  509  play -n -c1 synth 3 sine 500
+  510  play -n synth brownnoise synth pinknoise mix synth 1 sine amod 0.3 10
+  511  play -n synth brownnoise synth pinknoise mix synth 0.2 sine amod 0.3 10
+  512  play -n synth brownnoise synth pinknoise mix synth 0.1 sine amod 0.3 10
+  513  play -n synth brownnoise synth pinknoise mix synth 0.01 sine amod 0.3 10
+  514  play -n synth brownnoise synth pinknoise mix synth 0.01
+  515  play -n synth brownnoise synth pinknoise mix synth 0.02
+  516  play -n synth brownnoise synth pinknoise mix synth 0.01
+  517  play -n synth brownnoise synth pinknoise mix synth 1.01
+  518  play -n synth brownnoise synth pinknoise mix synth 1.01 sine amod 0.3 10
+  519  play -n synth brownnoise synth pinknoise mix synth 1.01 sine amod 10
+  520  play -n synth brownnoise synth pinknoise mix synth 1.01 sine amod 0.3 10
+  521  play -n synth brownnoise synth pinknoise mix synth 1.01 sine amod 5
+  522  play -n synth brownnoise synth pinknoise mix synth 1.01 sine amod 2
+  523  play -n synth brownnoise synth pinknoise mix synth 1.01 sine amod 100
+  524  play -n synth brownnoise synth pinknoise mix synth 1.01 sine amod 30
+  525  play -n synth brownnoise synth pinknoise mix synth 0.03 sine amod 30
+  526  play -n synth brownnoise synth pinknoise mix synth 0.01 sine amod 30
+  527  play -n synth brownnoise synth pinknoise mix synth 0.002 sine amod 30
+  528  play -n synth brownnoise synth pinknoise mix synth 0.005 sine amod 30
+  529  play -n synth sin .1 1 200
+  530  play -n synth .1 1 sine 200
+  531  play -n synth .1 3 sine 200
+  532  play -n synth brownnoise synth pinknoise mix synth 0.005 sine amod 30
+  533  play -n synth brownnoise synth pinknoise mix synth 0.005
+  534  play -n synth brownnoise synth pinknoise mix synth 0.005 delay 0.5 synth pinknoise synth 0.005
+  535  play -n synth brownnoise synth pinknoise synth 0.005 delay 0.5 synth pinknoise synth 0.005
+  536  play -n synth brownnoise synth pinknoise synth 0.005 delay 1.5 synth pinknoise synth 0.005
+  537  play -n delay 1.5 synth pinknoise synth 0.005
+  538  sox -t sl - -t sl - synth $len pinknoise < /dev/zero |  sox -t sl - -t ossdsp /dev/dsp band -n 1200 200 vibro 20 .1
+  540  sox -t sl - -t sl - synth $len pinknoise < /dev/zero |  sox -t sl - -t ossdsp /dev/dsp band -n 1200 200 vibro 20 .1
+  541  play -n synth 1 pluck E3 pluck C3 repeat 2
+  542  play -n synth 1 pluck E3 pluck C3 repeat 1
+  543  play -n synth 1 pluck E3 pluck D3 repeat 1
+  544  play -n synth 1 pluck E3 pluck C3 repeat 1 channels 1
+  545  play -n -c1 synth sin %-12 sin %-9 sin %-5 sin %-2 fade h 0.1 1 0.1
+  546  play -n synth -j 3 sin %3 sin %-2 sin %-5 sin %-9                    sin %-14 sin %-21 fade h .01 2 1.5 delay                    1.3 1 .76 .54 .27 remix - fade h 0 2.7 2.5 norm -1
+  547  play -n synth pl G2 pl B2 pl D3 pl G3 pl D4 pl G4                    delay 0 .05 .1 .15 .2 .25 remix - fade 0 4 .1 norm -1
+  548  play -n synth pinknoise synth 0.005
+  549  play -n synth pinknoise
+  550  play -n synth pinknoise 0.005 
+  551  play -n synth pinknoise synth 0.005 synth pinknoise synth 0.01
+  552  play -n synth pinknoise synth 0.005 synth pinknoise synth 0.01 delay 0 0.5
+  553  play -n synth pl G2 pl B2 pl D3 pl G3 pl D4 pl G4                    delay 0 .05 .1 .15 .2 .25 remix - fade 0 4 .1 norm -1
+  554  play -n synth pl G2 pl B2 pl D3 pl G3 pl D4 pl G4                    delay 0 .05 .1 .15 .2 .25
+  555  play -n synth pl G2 pl B2 pl D3 pl G3 pl D4 pl G4                    delay 0 .05 .1 .15 .2 .25 remix - fade 0 2 .1 norm -1
+  556  play -n synth pl G2 pl B2 pl D3 pl G3 pl D4 pl G4                    delay 0 .05 .1 .15 .2 .25 remix - fade 0 4 .1
+  557  play -n synth pl G2 pl B2                    delay 0 .05 remix - fade 0 4 .1
+  558  play -n synth pl G2 pl B2       delay 0 .5 remix - fade 0 4 .1
+  559  play -n synth pl G2 pl B2       delay 0 .5 remix - fade 0 2 .1
+  560  history | grep "play\|sox"
+  561  history | grep "play\|sox" >/tmp/sox_cmd
+"
+
+function sound_tap()
+{
+	if [ -n "$SOX" ];then
+		play -n synth brownnoise synth sine mix synth 0.002 sine amod 30 2>/dev/null&
+	fi
+}
+
 function to_operator()
 {
 	CH="$1"
@@ -148,6 +219,7 @@ function to_operator()
 		if [ $TRY_1_ON_10 -ge 70 ]; then
 			wait_before_char
 		fi
+		#sound_tap
 		to_operator_direct "$CH"
 	fi
 }
