@@ -27,19 +27,19 @@ for CHANGE in {1..1}; do
 		git_push
 		pause
 		operator leader
-		git_pull
+		git_pull_noff
 		pause
+		vi_save_and_close
 		vi_open src1
 		vi_search feature1
 		vi_change_line feature1.$CHANGE.$SUBCHANGE.x
 		vi_save_and_close
 		git_add src1
 		git_commit feature 1 change $CHANGE.$SUBCHANGE.x
-		vi_save_and_close
 		git_push
 		pause
 		operator dev2
-		git_pull
+		git_pull_noff
 		pause
 		vi_save_and_close
 		vi_open src1
@@ -51,7 +51,7 @@ for CHANGE in {1..1}; do
 	done
 
 	operator dev2
-	git_pull
+	git_pull_noff
 	vi_save_and_close
 	git_push
 done

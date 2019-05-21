@@ -6,7 +6,7 @@ if [ -z "$TUTAUT" ]; then
 	DEFAULT_WAIT_AFTER_SPACE=0.5
 	DEFAULT_WAIT_BEFORE_ENTER=1.0
 	DEFAULT_WAIT_AFTER_COMMAND=2.0
-	DEFAULT_ERRORS_PERCENT=10
+	DEFAULT_ERRORS_PERCENT=5
 	DO_PAUSE=1
 	DEFAULT_PAUSE=3
 	MIN_WAIT_CHAR=$DEFAULT_MIN_WAIT_CHAR
@@ -95,6 +95,7 @@ function speed_up()
 		WAIT_BEFORE_ENTER=0
 		WAIT_AFTER_COMMAND=0.2
 		ERRORS_PERCENT=0
+		DO_PAUSE=
 	fi
 }
 
@@ -107,6 +108,7 @@ function slow_down()
 		WAIT_BEFORE_ENTER=$DEFAULT_WAIT_BEFORE_ENTER
 		WAIT_AFTER_COMMAND=$DEFAULT_WAIT_AFTER_COMMAND
 		ERRORS_PERCENT=$DEFAULT_ERRORS_PERCENT
+		DO_PAUSE=1
 	fi
 }
 
@@ -294,6 +296,11 @@ function git_add()
 function git_pull()
 {
 	send_command git pull
+}
+
+function git_pull_noff()
+{
+	send_command git pull --no-ff
 }
 
 function git_pull_rebase()
