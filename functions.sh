@@ -6,6 +6,8 @@ if [ -z "$TUTAUT" ]; then
 	DEFAULT_WAIT_AFTER_SPACE=0.5
 	DEFAULT_WAIT_BEFORE_ENTER=1.0
 	DEFAULT_WAIT_AFTER_COMMAND=2.0
+	DEFAULT_WAIT_CHANGE_OPERATOR=3.0
+	DEFAULT_WAIT_AFTER_INFO=3.0
 	DEFAULT_ERRORS_PERCENT=5
 	DO_PAUSE=1
 	DEFAULT_PAUSE=3
@@ -14,7 +16,10 @@ if [ -z "$TUTAUT" ]; then
 	WAIT_AFTER_SPACE=$DEFAULT_WAIT_AFTER_SPACE
 	WAIT_BEFORE_ENTER=$DEFAULT_WAIT_BEFORE_ENTER
 	WAIT_AFTER_COMMAND=$DEFAULT_WAIT_AFTER_COMMAND
+	WAIT_CHANGE_OPERATOR=$DEFAULT_WAIT_CHANGE_OPERATOR
+	WAIT_AFTER_INFO=$DEFAULT_WAIT_AFTER_INFO
 	ERRORS_PERCENT=$DEFAULT_ERRORS_PERCENT
+	VIDEO_FPS=25
 	OPERATOR=
 	declare -A OPERATORS
 	WINDOW_TYPE=tmux
@@ -22,7 +27,7 @@ if [ -z "$TUTAUT" ]; then
 fi
 BACKSPACES="\\h\\h\\h\\h\\h\\h\\h\\h\\h\\h"
 BACKSPACES_NOT_ESCAPED=""
-FILE_INFO=/tmp/tutaut.info
+FILE_LOG=/tmp/tutaut.log
 FILE_DEBUG=/tmp/tutaut.debug
 
 if which sox 2>/dev/null
@@ -37,14 +42,17 @@ function now()
 {
 	TIME_NOW=$(date +%s%N)
 	TIME_START=${TIME_START:-$TIME_NOW}
-	TIME_ELAPSED=$((TIME_NOW-TIME_START))
+	TIME_ELAPSED=$(((TIME_NOW-TIME_START)/1000000))
+	FRAME_NUM=$((TIME_ELAPSED/VIDEO_FPS))
+	LOG_PREFIX=$TIME_ELAPSED:$FRAME_NUM
 }
 
 function info()
 {
 	now
 	echo "$*" 1>&2
-	echo "$TIME_ELAPSED:info:$*" >>$FILE_INFO
+	echo "$LOG_PREFIX:info:$*" >>$FILE_LOG
+	sleep $WAIT_AFTER_INFO
 }
 
 function debug()
@@ -53,7 +61,7 @@ function debug()
 	then
 		now
 		echo "$*" 1>&2
-		echo "$TIME_ELAPSED:$*" >>$FILE_DEBUG
+		echo "$LOG_PREFIX:$*" >>$FILE_DEBUG
 	fi
 }
 
@@ -61,12 +69,12 @@ work_begin()
 {
 	TIME_START=
 	now
-	echo "$TIME_ELAPSED:begin:" >$FILE_INFO
+	echo "$LOG_PREFIX:begin:" >$FILE_LOG
 }
 
 work_end()
 {
-	echo "$TIME_ELAPSED:end:" >>$FILE_INFO
+	echo "$LOG_PREFIX:end:" >>$FILE_LOG
 }
 
 function operator()
@@ -87,7 +95,10 @@ function operator()
 	fi
 	debug "switch to operator $OPERATOR"
 	now
-	echo "$TIME_ELAPSED:operator:$OPERATOR" >>$FILE_INFO
+	echo "$LOG_PREFIX:goto_operator:$OPERATOR" >>$FILE_LOG
+	sleep $WAIT_CHANGE_OPERATOR
+	now
+	echo "$LOG_PREFIX:arrive_to_operator:$OPERATOR" >>$FILE_LOG
 }
 
 function launch_terminal_on_new_session()
@@ -129,6 +140,8 @@ function speed_up()
 		WAIT_AFTER_SPACE=0
 		WAIT_BEFORE_ENTER=0
 		WAIT_AFTER_COMMAND=0.2
+		WAIT_CHANGE_OPERATOR=0.3
+		WAIT_AFTER_INFO=0.3
 		ERRORS_PERCENT=0
 		DO_PAUSE=
 	fi
@@ -142,6 +155,8 @@ function slow_down()
 		WAIT_AFTER_SPACE=$DEFAULT_WAIT_AFTER_SPACE
 		WAIT_BEFORE_ENTER=$DEFAULT_WAIT_BEFORE_ENTER
 		WAIT_AFTER_COMMAND=$DEFAULT_WAIT_AFTER_COMMAND
+		WAIT_CHANGE_OPERATOR=$DEFAULT_WAIT_CHANGE_OPERATOR
+		WAIT_AFTER_INFO=$DEFAULT_WAIT_AFTER_INFO
 		ERRORS_PERCENT=$DEFAULT_ERRORS_PERCENT
 		DO_PAUSE=1
 	fi
@@ -342,6 +357,8 @@ function send()
 			send_flush
 		elif [ "$CHAR" = "/" -o "$CHAR" = "-" -o "$CHAR" = "." -o "$CHAR" = "_" ]; then
 			send_flush
+		elif [ "$CHAR" = "" -o "$CHAR" = "\\h" ]; then
+			send_flush
 		elif [ "${CH:0:1}" = "\\" ]; then
 			send_flush
 		fi
@@ -394,6 +411,12 @@ function command_exec()
 	esac
 }
 
+function do_suspend()
+{
+	echo "Execution stopped, press S to resume..."
+	STOPPED=1
+}
+
 function pause()
 {
 	if [ -n "$DO_PAUSE" ]
@@ -418,6 +441,21 @@ function git_clone()
 function git_add()
 {
 	send_command git add "$@"
+}
+
+function git_am_show_current_patch()
+{
+	send_command git am --show-current-patch
+}
+
+function git_merge_continue()
+{
+	send_command git merge --continue
+}
+
+function git_rebase_continue()
+{
+	send_command git rebase --continue
 }
 
 function git_pull()
@@ -474,6 +512,11 @@ function vi_search()
 	send_command "/$1"
 }
 
+function vi_insert_text()
+{
+	send "i$*"
+}
+
 function vi_add_line()
 {
 	send "o$*"
@@ -491,17 +534,17 @@ function vi_change_line()
 
 function vi_go_line()
 {
-	send_command "$1G"
+	send "$1G"
 }
 
 function vi_up()
 {
-	send_command "k"
+	send "k"
 }
 
 function vi_down()
 {
-	send_command "j"
+	send "j"
 }
 
 function vi_save_and_close()
