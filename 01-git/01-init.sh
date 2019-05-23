@@ -8,6 +8,8 @@ rm -rf $BASE
 
 for OP in leader dev1 dev2; do operator $OP; clear_screen;done
 
+work_begin
+
 operator leader
 info "Operator creates the central repository"
 create_dir $BASE/public/project
@@ -38,3 +40,4 @@ pause
 info "Show actual log"
 git_log
 pause 5
+work_end

@@ -60,7 +60,7 @@ function debug()
 	if [ -n "$DEBUG" ]
 	then
 		now
-		echo "$*" 1>&2
+		#echo "$*" 1>&2
 		echo "$LOG_PREFIX:$*" >>$FILE_DEBUG
 	fi
 }
@@ -79,6 +79,7 @@ work_end()
 
 function operator()
 {
+	PREV_OPERATOR=$OPERATOR
 	OPERATOR=$1
 	if [ -z ${OPERATORS[$OPERATOR]} ]; then
 		FOUND_SESSION=$(tmux list-sessions | cut -d":" -f1 | grep $OPERATOR)
@@ -93,12 +94,14 @@ function operator()
 		fi
 		OPERATORS[$OPERATOR]=1
 	fi
-	debug "switch to operator $OPERATOR"
-	now
-	echo "$LOG_PREFIX:goto_operator:$OPERATOR" >>$FILE_LOG
-	sleep $WAIT_CHANGE_OPERATOR
-	now
-	echo "$LOG_PREFIX:arrive_to_operator:$OPERATOR" >>$FILE_LOG
+	if [ "${OPERATOR}" != "$PREV_OPERATOR" ]; then
+		debug "switch to operator $OPERATOR"
+		now
+		echo "$LOG_PREFIX:goto_operator:$OPERATOR" >>$FILE_LOG
+		sleep $WAIT_CHANGE_OPERATOR
+		now
+		echo "$LOG_PREFIX:arrive_to_operator:$OPERATOR" >>$FILE_LOG
+	fi
 }
 
 function launch_terminal_on_new_session()
@@ -180,11 +183,17 @@ function wait_after_command()
 	sleep $WAIT_AFTER_COMMAND
 }
 
-function wait_before_char()
+function wait_command_if_stopped()
 {
+	debug "wait command if stopped"
 	while [ -n "$STOPPED" -a "${STEP_ON:-0}" -lt 1 ]; do
 		command_check
 	done
+}
+
+function wait_before_char()
+{
+	wait_command_if_stopped
 	[ -n "$STEP_ON" ] && STEP_ON=$((STEP_ON-1))
 	TRY_1_ON_10=$((RANDOM%100))
 	if [ $TRY_1_ON_10 -ge 70 ]; then
@@ -298,6 +307,7 @@ function to_operator_direct()
 function send_flush()
 {
 	#debug "flush: $BUFFER"
+	wait_command_if_stopped
 	if [ -n "$BUFFER" ]
 	then
 		to_operator_direct "$BUFFER"
@@ -394,6 +404,7 @@ function clear_screen()
 
 function command_check()
 {
+	debug "waiting command"
 	read -t 0.00001 COMMAND
 	if [ -n "$COMMAND" ]; then
 		command_exec "$COMMAND"
@@ -448,6 +459,11 @@ function git_am_show_current_patch()
 	send_command git am --show-current-patch
 }
 
+function git_merge()
+{
+	send_command git merge $*
+}
+
 function git_merge_continue()
 {
 	send_command git merge --continue
@@ -473,9 +489,19 @@ function git_pull_rebase()
 	send_command git pull --rebase
 }
 
+function git_checkout()
+{
+	send_command git checkout $*
+}
+
 function git_push()
 {
-	send_command git push
+	send_command git push $*
+}
+
+function git_branch()
+{
+	send_command git branch $*
 }
 
 function git_commit()
@@ -485,25 +511,20 @@ function git_commit()
 	send_command git commit -m "\"$COMMENT from op $OPERATOR\""
 }
 
-function git_push()
-{
-	send_command git push
-}
-
 function git_diff()
 {
-	send_command git diff
+	send_command git diff $*
 }
 
 function git_log()
 {
-	send_command "git log --graph --oneline | cat"
+	send_command "git log --graph --oneline --decorate=short | cat"
 }
 
 function vi_open()
 {
 	FILE=${1:-$SRC}
-	send_command vi $FILE
+	send_command vim -n $FILE
 	send 1G
 }
 
