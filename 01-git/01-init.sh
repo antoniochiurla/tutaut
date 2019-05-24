@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-. ../functions.sh
+. ../tutaut.sh
 
 #DEBUG=1
 

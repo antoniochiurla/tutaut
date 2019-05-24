@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-. ../functions.sh
+. ../tutaut.sh
 speed_up
 FIXED_SPEED=1 . 01-init.sh
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-. ../functions.sh
+. ../tutaut.sh
 
 speed_up
 FIXED_SPEED=1 . 03-dev2-add-feature.sh
