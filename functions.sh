@@ -518,7 +518,7 @@ function git_diff()
 
 function git_log()
 {
-	send_command "git log --graph --oneline --decorate=short | cat"
+	send_command "git log --graph --oneline --decorate=short --all | cat"
 }
 
 function vi_open()
