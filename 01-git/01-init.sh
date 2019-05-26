@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 . ../tutaut.sh
 
-#DEBUG=1
-
 BASE=/tmp/git-tutorial
 rm -rf $BASE
 

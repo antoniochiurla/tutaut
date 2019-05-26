@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-. ../functions.sh
+. ../tutaut.sh
 
+DEBUG=1
 BASE=/tmp/git-tutorial
 rm -rf $BASE
 
-speed_up
 for OP in leader dev1 dev2; do operator $OP; clear_screen;done
 operator leader
 create_dir $BASE/public/project
