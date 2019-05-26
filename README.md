@@ -9,6 +9,7 @@ By now written using *vim* and composed by *bash* scripts
 
 ## dependencies
 * bash
+* xterm
 * tmux
 
 ## composition
