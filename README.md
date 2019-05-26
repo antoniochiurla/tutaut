@@ -12,6 +12,10 @@ By now written using *vim* and composed by *bash* scripts
 * xterm
 * tmux
 
+## known issues
+* sometimes, very rare in my own PC, commands repots some wrong chars, maybe due by communication with tmux or script internal text treating
+* random error writing and corresponding correction generate some wrong text
+
 ## composition
 * tutaut.sh
   * is the main script
