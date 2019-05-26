@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 if [ -z "$TUTAUT" ]; then
 	TUTAUT=1
 	SRC=src
@@ -11,6 +12,7 @@ if [ -z "$TUTAUT" ]; then
 	DEFAULT_ERRORS_PERCENT=5
 	DO_PAUSE=1
 	DEFAULT_PAUSE=3
+	NUM_WAIT_COMMAND=1
 	MIN_WAIT_CHAR=$DEFAULT_MIN_WAIT_CHAR
 	MAX_WAIT_CHAR=$DEFAULT_MAX_WAIT_CHAR
 	WAIT_AFTER_SPACE=$DEFAULT_WAIT_AFTER_SPACE
@@ -24,19 +26,20 @@ if [ -z "$TUTAUT" ]; then
 	declare -A OPERATORS
 	WINDOW_TYPE=tmux
 	XTERM_SMALL_FONT=
+	BACKSPACES="\\h\\h\\h\\h\\h\\h\\h\\h\\h\\h"
+	BACKSPACES_NOT_ESCAPED=""
+	FILE_LOG=/tmp/tutaut.log
+	FILE_DEBUG=/tmp/tutaut.debug
+	echo -n >$FILE_LOG
+	echo -n >$FILE_DEBUG
+	if which play >/dev/null 2>&1
+	then
+		SOX_PLAY=$(which play)
+	fi
+	stty -icanon min 1
+	COMMAND_KEY_STEP=" "
 fi
-BACKSPACES="\\h\\h\\h\\h\\h\\h\\h\\h\\h\\h"
-BACKSPACES_NOT_ESCAPED=""
-FILE_LOG=/tmp/tutaut.log
-FILE_DEBUG=/tmp/tutaut.debug
 
-if which sox 2>/dev/null
-then
-	SOX=$(which sox)
-fi
-
-stty -icanon min 1
-COMMAND_KEY_STEP=" "
 
 function now()
 {
@@ -60,7 +63,6 @@ function debug()
 	if [ -n "$DEBUG" ]
 	then
 		now
-		#echo "$*" 1>&2
 		echo "$LOG_PREFIX:$*" >>$FILE_DEBUG
 	fi
 }
@@ -81,9 +83,9 @@ function operator()
 {
 	PREV_OPERATOR=$OPERATOR
 	OPERATOR=$1
-	if [ -z ${OPERATORS[$OPERATOR]} ]; then
+	if [ -z "${OPERATORS[$OPERATOR]}" ]; then
 		FOUND_SESSION=$(tmux list-sessions | cut -d":" -f1 | grep $OPERATOR)
-		if [ -z ${FOUND_SESSION} ]; then
+		if [ -z "${FOUND_SESSION}" ]; then
 			launch_terminal_on_new_session
 			FIRST_FREE_SESSION=$(tmux list-sessions | cut -d":" -f1 | grep "^[0-9]" | sort -n | head -1)
 			debug "renaming tmux session $FIRST_FREE_SESSION to $OPERATOR"
@@ -167,19 +169,16 @@ function slow_down()
 
 function wait_after_space()
 {
-	#debug "wait after space"
 	sleep $WAIT_AFTER_SPACE
 }
 
 function wait_before_enter()
 {
-	#debug "wait before enter"
 	sleep $WAIT_BEFORE_ENTER
 }
 
 function wait_after_command()
 {
-	#debug "wait after command"
 	sleep $WAIT_AFTER_COMMAND
 }
 
@@ -194,13 +193,15 @@ function wait_command_if_stopped()
 function wait_before_char()
 {
 	wait_command_if_stopped
-	[ -n "$STEP_ON" ] && STEP_ON=$((STEP_ON-1))
+	[ -n "$STEP_ON" ] && STEP_ON=$((STEP_ON-1)) && [ "$STEP_ON" -eq 0 ] && STOPPED=1
 	TRY_1_ON_10=$((RANDOM%100))
 	if [ $TRY_1_ON_10 -ge 70 ]; then
-		AMOUNT=$((MIN_WAIT_CHAR+RANDOM))
-		[ $AMOUNT -gt $MAX_WAIT_CHAR ] && AMOUNT=$MAX_WAIT_CHAR
-		MS=$((AMOUNT%1000))
-		sleep 0.$MS
+		WAIT_BEFORE_CHAR_AMOUNT=$((MIN_WAIT_CHAR+RANDOM))
+		[ $WAIT_BEFORE_CHAR_AMOUNT -gt $MAX_WAIT_CHAR ] && WAIT_BEFORE_CHAR_AMOUNT=$MAX_WAIT_CHAR
+		WAIT_BEFORE_CHAR_MS=$((WAIT_BEFORE_CHAR_AMOUNT%1000))
+		[ "$WAIT_BEFORE_CHAR_MS" -ne 0 ] && sleep 0.$WAIT_BEFORE_CHAR_MS
+	else
+		WAIT_BEFORE_CHAR_MS=0
 	fi
 }
 
@@ -265,8 +266,9 @@ function wait_before_char()
 
 function sound_tap()
 {
-	if [ -n "$SOX" ];then
-		play -n synth brownnoise synth sine mix synth 0.002 sine amod 30 2>/dev/null&
+	return
+	if [ -n "$SOX_PLAY" ];then
+		$SOX_PLAY -n synth brownnoise synth sine mix synth 0.002 sine amod 30 2>/dev/null&
 	fi
 }
 
@@ -274,40 +276,42 @@ function to_operator()
 {
 	command_check
 	CH="$1"
-	if [ $MAX_WAIT_CHAR -eq 0 ];then
+	debug "to_operator: $CH"
+	wait_before_char
+	if [ "$WAIT_BEFORE_CHAR_MS" -eq 0 ];then
 		BUFFER+="$CH"
+		debug "buffer: $BUFFER"
 	else
-		wait_before_char
-		#sound_tap
+		send_flush
+		sound_tap
 		to_operator_direct "$CH"
 	fi
 }
 
 function to_operator_direct()
 {
-	CH="$1"
+	DIRECT_CH="$1"
 	if [ -n "$OPERATOR" ]; then
-		if [ "${CH:0:1}" = "\\" ]; then
-			#debug "sending control key to operator"
-			CONTROL=${CH:1:1}
+		if [ "${DIRECT_CH:0:1}" = "\\" ]; then
+			CONTROL=${DIRECT_CH:1:1}
 			case $CONTROL in 
-				n) tmux send -t$OPERATOR "
+				n) debug "to_operator_direct newline"; tmux send -t$OPERATOR "
 ";;
-				h) tmux send -t$OPERATOR "";;
+				h) debug "to_operator_direct backspace"; tmux send -t$OPERATOR "";;
 				*) debug "ERROR unknown \\$CONTROL control key";;
 			esac
 		else
-			tmux send -t$OPERATOR -- "$CH"
+			debug "to_operator_direct: $DIRECT_CH"
+			tmux send -t$OPERATOR -- "$DIRECT_CH"
 		fi
 	else
-		echo -ne "$CH"
+		echo -ne "$DIRECT_CH"
 	fi
 }
 
 function send_flush()
 {
-	#debug "flush: $BUFFER"
-	wait_command_if_stopped
+	debug "send_flush: $BUFFER"
 	if [ -n "$BUFFER" ]
 	then
 		to_operator_direct "$BUFFER"
@@ -332,16 +336,15 @@ function insert_errors(){
 				MISTAKE=${ALL:$POS_PLUS_1:$LEN_MISTAKE}
 				MISTAKE=${MISTAKE//\\/ }
 				LEN_MISTAKE=${#MISTAKE}
-				LEN_MISTAKE_DOUBLE=$((LEN_MISTAKE*2))
-				CORRECTION=${BACKSPACES:0:$LEN_MISTAKE_DOUBLE}
+				CORRECTION=${BACKSPACES_NOT_ESCAPED:0:$LEN_MISTAKE}
 			else
 				MISTAKE=" "
-				CORRECTION="\\h"
+				CORRECTION=""
 			fi
-			debug "Adding error $POS $LEN1 $LEN2 $MISTAKE $CORRECTION"
 			ALL_NEW="${ALL:0:$LEN1}${MISTAKE}${CORRECTION}${ALL:$POS2:$LEN2}"
-			#ALL_NEW="${ALL:0:$LEN1}a\\h${ALL:$POS2:$LEN2}"
 			ALL="$ALL_NEW"
+			debug "Adding error $POS $LEN1 $LEN2 $MISTAKE $CORRECTION ALL: $ALL"
+			break # one only mistake on single command
 		fi
 	done
 }
@@ -369,7 +372,7 @@ function send()
 			send_flush
 		elif [ "$CHAR" = "" -o "$CHAR" = "\\h" ]; then
 			send_flush
-		elif [ "${CH:0:1}" = "\\" ]; then
+		elif [ "${CHAR:0:1}" = "\\" ]; then
 			send_flush
 		fi
 	done
@@ -405,9 +408,21 @@ function clear_screen()
 function command_check()
 {
 	debug "waiting command"
-	read -t 0.00001 COMMAND
+	COMMAND=
+	if [ -n "$STOPPED" ]
+	then
+		if [ $NUM_WAIT_COMMAND -lt 99999 ]
+		then
+			NUM_WAIT_COMMAND=$((NUM_WAIT_COMMAND+50))
+		else
+			NUM_WAIT_COMMAND=99999
+		fi
+	fi
+	WAIT_COMMAND=$((NUM_WAIT_COMMAND%100000+100000))
+	read -t 0.${WAIT_COMMAND:1} COMMAND
 	if [ -n "$COMMAND" ]; then
 		command_exec "$COMMAND"
+		NUM_WAIT_COMMAND=1
 	fi
 }
 
@@ -418,7 +433,7 @@ function command_exec()
 	s) STOPPED=1; debug "Stopped";;
 	S) unset STOPPED; debug "Restarted";;
 	[0-9]) COMMAND_NUM=$COMMAND$COMMAND_NUM; debug "Num: $COMMAND_NUM";;
-	+) STEP_ON=${COMMAND_NUM:-1}; debug "Step on: $STEP_ON";;
+	+) STEP_ON=${COMMAND_NUM:-1}; COMMAND_NUM= ; debug "Step on: $STEP_ON";;
 	esac
 }
 
@@ -579,3 +594,8 @@ function print_file()
 }
 
 now
+
+for SCRIPT in $@
+do
+	. "$SCRIPT"
+done
