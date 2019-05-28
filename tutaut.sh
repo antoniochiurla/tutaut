@@ -565,7 +565,7 @@ function vi_delete_line()
 
 function vi_change_line()
 {
-	send "^C$*"
+	send "S$*"
 }
 
 function vi_go_line()
