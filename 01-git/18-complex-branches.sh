@@ -5,7 +5,7 @@ speed_up
 FIXED_SPEED=1 . 01-init.sh
 
 slow_down
-info Leader adds stubs for new features
+info "Leader adds stubs for new features"
 operator leader
 git_pull
 vi_open src1
@@ -19,12 +19,12 @@ done
 vi_save_and_close
 git_add src1
 git_commit stubs for features 1 to 6
-info Leader pushes changes
+info "Leader pushes changes"
 git_push
 FEATURES="0 2 4"
 CHANGES="1 2 3 4"
 
-info Developers clone the repository
+info "Developers clone the repository"
 for DEV in 1 2; do
 	operator dev$DEV
 	create_dir $BASE/dev$DEV
@@ -32,7 +32,7 @@ for DEV in 1 2; do
 	git_clone $BASE/public/project
 	change_dir project
 done
-info Developers create branches for features
+info "Developers create branches for features"
 for FEAT in $FEATURES;do
 	for DEV in 1 2; do
 		operator dev$DEV
@@ -48,7 +48,7 @@ for FEAT in $FEATURES;do
 	for CHANGE in $CHANGES; do
 		for DEV in 1 2; do
 			FEATURE=$((FEAT+DEV))
-			info dev$DEV change feature$FEATURE time: $CHANGE
+			info "dev$DEV change feature$FEATURE time: $CHANGE"
 			operator dev$DEV
 			git_pull
 			git_checkout feat$FEATURE
@@ -58,32 +58,26 @@ for FEAT in $FEATURES;do
 			vi_save_and_close
 			git_add src1
 			git_commit feature $FEATURE.$CHANGE
-			info dev$DEV pushes the change
+			info "dev$DEV pushes the change"
 			git_push
 		done
 		speed_up
 	done
 done
 slow_down
-for FEAT in $FEATURES;do
-	for DEV in 1 2; do
-		info dev$DEV switch to master branch
-		operator dev$DEV
-		FEATURE=$((FEAT+DEV))
-		git_checkout master
-		git_pull
-		info dev$DEV merge feature $FEATURE branch in master branch
-		git_merge --no-ff feat$FEATURE
-		vi_insert_text "Manual "
-		vi_save_and_close
-		info dev$DEV pushes merged stuff
-		git_push
-	done
-	speed_up
+operator leader
+info "Leader switch to master branch"
+git_checkout master
+git_pull
+for FEATURE in {1..6};do
+	info "merge feature $FEATURE branch in master branch"
+	git_merge --no-ff origin/feat$FEATURE
+	vi_insert_text "Manual "
+	vi_save_and_close
 done
+git_push
 
-slow_down
-info Leader check work done
+info "Leader check work done"
 operator leader
 git_pull
 git_log

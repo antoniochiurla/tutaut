@@ -4,15 +4,14 @@
 speed_up
 FIXED_SPEED=1 . 03-dev2-add-feature.sh
 
-FIXED_SPEED=1
 for CHANGE in {1..1}; do
 	slow_down
 	for SUBCHANGE in {1..3}; do
 		operator dev1
 		info "Dev1 updates project"
 		git_pull_noff
-		info "Dev1 make change $CHANGE.$SUBCHANGE"
 		vi_save_and_close
+		info "Dev1 make change $CHANGE.$SUBCHANGE"
 		vi_open src1
 		vi_search feature1
 		vi_change_line feature1.$CHANGE.$SUBCHANGE
