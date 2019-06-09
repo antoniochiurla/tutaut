@@ -84,17 +84,7 @@ function operator()
 	PREV_OPERATOR=$OPERATOR
 	OPERATOR=$1
 	if [ -z "${OPERATORS[$OPERATOR]}" ]; then
-		FOUND_SESSION=$(tmux list-sessions | cut -d":" -f1 | grep $OPERATOR)
-		if [ -z "${FOUND_SESSION}" ]; then
-			launch_terminal_on_new_session
-			FIRST_FREE_SESSION=$(tmux list-sessions | cut -d":" -f1 | grep "^[0-9]" | sort -n | head -1)
-			debug "renaming tmux session $FIRST_FREE_SESSION to $OPERATOR"
-			tmux rename-session -t$FIRST_FREE_SESSION $OPERATOR
-			tmux_set_option destroy-unattached on
-		else
-			launch_terminal_on_existing_session $OPERATOR
-		fi
-		OPERATORS[$OPERATOR]=1
+		create_operator
 	fi
 	if [ "${OPERATOR}" != "$PREV_OPERATOR" ]; then
 		debug "switch to operator $OPERATOR"
@@ -104,6 +94,21 @@ function operator()
 		now
 		echo "$LOG_PREFIX:arrive_to_operator:$OPERATOR" >>$FILE_LOG
 	fi
+}
+
+function create_operator()
+{
+	FOUND_SESSION=$(tmux list-sessions | cut -d":" -f1 | grep $OPERATOR)
+	if [ -z "${FOUND_SESSION}" ]; then
+		launch_terminal_on_new_session
+		FIRST_FREE_SESSION=$(tmux list-sessions | cut -d":" -f1 | grep "^[0-9]" | sort -n | head -1)
+		debug "renaming tmux session $FIRST_FREE_SESSION to $OPERATOR"
+		tmux rename-session -t$FIRST_FREE_SESSION $OPERATOR
+		tmux_set_option destroy-unattached on
+	else
+		launch_terminal_on_existing_session $OPERATOR
+	fi
+	OPERATORS[$OPERATOR]=1
 }
 
 function launch_terminal_on_new_session()
