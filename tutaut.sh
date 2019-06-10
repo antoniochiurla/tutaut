@@ -22,6 +22,9 @@ if [ -z "$TUTAUT" ]; then
 	WAIT_AFTER_COMMAND=$DEFAULT_WAIT_AFTER_COMMAND
 	WAIT_CHANGE_OPERATOR=$DEFAULT_WAIT_CHANGE_OPERATOR
 	WAIT_AFTER_INFO=$DEFAULT_WAIT_AFTER_INFO
+	SOUND_BUTTON_PRESS_MS=24
+	SOUND_BUTTONS_PRESS_MS=60
+	END_LAST_SOUND=0
 	ERRORS_PERCENT=$DEFAULT_ERRORS_PERCENT
 	VIDEO_FPS=25
 	OPERATOR=
@@ -48,7 +51,7 @@ function now()
 	TIME_NOW=$(date +%s%N)
 	TIME_START=${TIME_START:-$TIME_NOW}
 	TIME_ELAPSED=$(((TIME_NOW-TIME_START)/1000000))
-	FRAME_NUM=$((TIME_ELAPSED/VIDEO_FPS))
+	FRAME_NUM=$((TIME_ELAPSED*VIDEO_FPS/1000))
 	LOG_PREFIX=$TIME_ELAPSED:$FRAME_NUM
 }
 
@@ -277,9 +280,17 @@ function sound_button_press()
 {
 	#return
 	if [ -n "$SOX_PLAY" ];then
-		#$SOX_PLAY -n synth brownnoise synth sine mix synth 0.002 sine amod 30 2>/dev/null&
-		PLAY_VOLUME=$((RANDOM%5+3))
-		$SOX_PLAY --volume 0.$PLAY_VOLUME $PATH_TUTAUT/keyboard_button_press.mp3 2>/dev/null&
+		now
+		if [ $TIME_ELAPSED -gt $END_LAST_SOUND ]; then
+			if [ -n "$1" ]; then
+				PLAY_VOLUME=$1
+			else
+				PLAY_VOLUME=$((RANDOM%5+3))
+			fi
+			$SOX_PLAY --volume 0.$PLAY_VOLUME $PATH_TUTAUT/keyboard_button_press.mp3 2>/dev/null&
+			now
+			END_LAST_SOUND=$((TIME_ELAPSED+SOUND_BUTTON_PRESS_MS))
+		fi
 	fi
 }
 
@@ -287,9 +298,12 @@ function sound_buttons_press()
 {
 	#return
 	if [ -n "$SOX_PLAY" ];then
-		#$SOX_PLAY -n synth brownnoise synth sine mix synth 0.002 sine amod 30 2>/dev/null&
-		PLAY_VOLUME=$((RANDOM%5+1))
-		$SOX_PLAY --volume 0.$PLAY_VOLUME $PATH_TUTAUT/keyboard_buttons_press.mp3 2>/dev/null&
+		now
+		if [ $TIME_ELAPSED -gt $END_LAST_SOUND ]; then
+			PLAY_VOLUME=$((RANDOM%5+1))
+			$SOX_PLAY --volume 0.$PLAY_VOLUME $PATH_TUTAUT/keyboard_buttons_press.mp3 2>/dev/null&
+			END_LAST_SOUND=$((TIME_ELAPSED+SOUND_BUTTONS_PRESS_MS))
+		fi
 	fi
 }
 
@@ -318,11 +332,11 @@ function to_operator_direct()
 				n) debug "to_operator_direct newline"
 					tmux send -t$OPERATOR "
 "
-					sound_button_press
+					sound_button_press 9
 					;;
 				h) debug "to_operator_direct backspace"
 					tmux send -t$OPERATOR ""
-					sound_button_press
+					sound_button_press 9
 					;;
 				*) debug "ERROR unknown \\$CONTROL control key"
 					;;
