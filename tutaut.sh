@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 if [ -z "$TUTAUT" ]; then
+	PATH_TUTAUT=$(dirname ${BASH_SOURCE[0]})
+	echo $PATH_TUTAUT
 	TUTAUT=1
 	SRC=src
 	DEFAULT_MIN_WAIT_CHAR=0
@@ -269,11 +271,25 @@ function wait_before_char()
   561  history | grep "play\|sox" >/tmp/sox_cmd
 "
 
-function sound_tap()
+# free sound effects from https://www.fesliyanstudios.com
+
+function sound_button_press()
 {
-	return
+	#return
 	if [ -n "$SOX_PLAY" ];then
-		$SOX_PLAY -n synth brownnoise synth sine mix synth 0.002 sine amod 30 2>/dev/null&
+		#$SOX_PLAY -n synth brownnoise synth sine mix synth 0.002 sine amod 30 2>/dev/null&
+		PLAY_VOLUME=$((RANDOM%5+3))
+		$SOX_PLAY --volume 0.$PLAY_VOLUME $PATH_TUTAUT/keyboard_button_press.mp3 2>/dev/null&
+	fi
+}
+
+function sound_buttons_press()
+{
+	#return
+	if [ -n "$SOX_PLAY" ];then
+		#$SOX_PLAY -n synth brownnoise synth sine mix synth 0.002 sine amod 30 2>/dev/null&
+		PLAY_VOLUME=$((RANDOM%5+1))
+		$SOX_PLAY --volume 0.$PLAY_VOLUME $PATH_TUTAUT/keyboard_buttons_press.mp3 2>/dev/null&
 	fi
 }
 
@@ -288,7 +304,6 @@ function to_operator()
 		debug "buffer: $BUFFER"
 	else
 		send_flush
-		sound_tap
 		to_operator_direct "$CH"
 	fi
 }
@@ -300,13 +315,25 @@ function to_operator_direct()
 		if [ "${DIRECT_CH:0:1}" = "\\" ]; then
 			CONTROL=${DIRECT_CH:1:1}
 			case $CONTROL in 
-				n) debug "to_operator_direct newline"; tmux send -t$OPERATOR "
-";;
-				h) debug "to_operator_direct backspace"; tmux send -t$OPERATOR "";;
-				*) debug "ERROR unknown \\$CONTROL control key";;
+				n) debug "to_operator_direct newline"
+					tmux send -t$OPERATOR "
+"
+					sound_button_press
+					;;
+				h) debug "to_operator_direct backspace"
+					tmux send -t$OPERATOR ""
+					sound_button_press
+					;;
+				*) debug "ERROR unknown \\$CONTROL control key"
+					;;
 			esac
 		else
 			debug "to_operator_direct: $DIRECT_CH"
+			if [ ${#DIRECT_CH} -gt 2 ]; then
+				sound_buttons_press
+			else
+				sound_button_press
+			fi
 			tmux send -t$OPERATOR -- "$DIRECT_CH"
 		fi
 	else

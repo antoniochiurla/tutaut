@@ -26,6 +26,8 @@ By now written using *vim* and composed by *bash* scripts
 * v*.sh
   * some scripts to automate the screen recorded cut
 
+## attributions
+* free sound effects from https://www.fesliyanstudios.com
 
 ## Sorry
 My English is poor, excuse me for all errors you'll find and please, feel free to suggest all corrections.
