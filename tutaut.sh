@@ -204,8 +204,8 @@ function wait_before_char()
 {
 	wait_command_if_stopped
 	[ -n "$STEP_ON" ] && STEP_ON=$((STEP_ON-1)) && [ "$STEP_ON" -eq 0 ] && STOPPED=1
-	TRY_1_ON_10=$((RANDOM%100))
-	if [ $TRY_1_ON_10 -ge 70 ]; then
+	TRY_ON_100=$((RANDOM%100))
+	if [ $TRY_ON_100 -ge 40 ]; then
 		WAIT_BEFORE_CHAR_AMOUNT=$((MIN_WAIT_CHAR+RANDOM))
 		[ $WAIT_BEFORE_CHAR_AMOUNT -gt $MAX_WAIT_CHAR ] && WAIT_BEFORE_CHAR_AMOUNT=$MAX_WAIT_CHAR
 		WAIT_BEFORE_CHAR_MS=$((WAIT_BEFORE_CHAR_AMOUNT%1000))
