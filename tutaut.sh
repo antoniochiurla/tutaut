@@ -33,8 +33,9 @@ if [ -z "$TUTAUT" ]; then
 	XTERM_SMALL_FONT=
 	BACKSPACES="\\h\\h\\h\\h\\h\\h\\h\\h\\h\\h"
 	BACKSPACES_NOT_ESCAPED=""
-	FILE_LOG=/tmp/tutaut.log
-	FILE_DEBUG=/tmp/tutaut.debug
+	ID_USER=$(id --user)
+	FILE_LOG=/tmp/tutaut${ID_USER}.log
+	FILE_DEBUG=/tmp/tutaut${ID_USER}.debug
 	echo -n >$FILE_LOG
 	echo -n >$FILE_DEBUG
 	if which play >/dev/null 2>&1
@@ -53,6 +54,19 @@ function now()
 	TIME_ELAPSED=$(((TIME_NOW-TIME_START)/1000000))
 	FRAME_NUM=$((TIME_ELAPSED*VIDEO_FPS/1000))
 	LOG_PREFIX=$TIME_ELAPSED:$FRAME_NUM
+}
+
+function log()
+{
+	typed_log generic $*
+}
+
+function typed_log()
+{
+	TYPE="$1"
+	shift
+	now
+	echo "$LOG_PREFIX:$TYPE:$*" >>$FILE_LOG
 }
 
 function info()
@@ -103,7 +117,7 @@ function operator()
 
 function create_operator()
 {
-	FOUND_SESSION=$(tmux list-sessions | cut -d":" -f1 | grep $OPERATOR)
+	FOUND_SESSION=$(tmux list-sessions 2>/dev/null | cut -d":" -f1 | grep $OPERATOR)
 	if [ -z "${FOUND_SESSION}" ]; then
 		launch_terminal_on_new_session
 		FIRST_FREE_SESSION=$(tmux list-sessions | cut -d":" -f1 | grep "^[0-9]" | sort -n | head -1)
@@ -287,6 +301,7 @@ function sound_button_press()
 			else
 				PLAY_VOLUME=$((RANDOM%5+3))
 			fi
+			typed_log keyboard_button
 			$SOX_PLAY --volume 0.$PLAY_VOLUME $PATH_TUTAUT/keyboard_button_press.mp3 2>/dev/null&
 			now
 			END_LAST_SOUND=$((TIME_ELAPSED+SOUND_BUTTON_PRESS_MS))
@@ -301,6 +316,7 @@ function sound_buttons_press()
 		now
 		if [ $TIME_ELAPSED -gt $END_LAST_SOUND ]; then
 			PLAY_VOLUME=$((RANDOM%5+1))
+			typed_log keyboard_buttons
 			$SOX_PLAY --volume 0.$PLAY_VOLUME $PATH_TUTAUT/keyboard_buttons_press.mp3 2>/dev/null&
 			END_LAST_SOUND=$((TIME_ELAPSED+SOUND_BUTTONS_PRESS_MS))
 		fi
@@ -453,7 +469,6 @@ function clear_screen()
 
 function command_check()
 {
-	debug "waiting command"
 	COMMAND=
 	if [ -n "$STOPPED" ]
 	then
@@ -465,7 +480,9 @@ function command_check()
 		fi
 	fi
 	WAIT_COMMAND=$((NUM_WAIT_COMMAND%100000+100000))
-	read -t 0.${WAIT_COMMAND:1} COMMAND
+	ARG_READ_TIMEOUT=0.${WAIT_COMMAND:1}
+	debug "waiting command $ARG_READ_TIMEOUT"
+	read -t ${ARG_READ_TIMEOUT} COMMAND
 	if [ -n "$COMMAND" ]; then
 		command_exec "$COMMAND"
 		NUM_WAIT_COMMAND=1
@@ -495,8 +512,8 @@ function pause()
 {
 	if [ -n "$DO_PAUSE" ]
 	then
-		debug "Waiting for $1..."
 		TMOUT=${1:-$DEFAULT_PAUSE}
+		debug "Waiting for $TMOUT..."
 		read PAUSE
 		TMOUT=
 	fi
