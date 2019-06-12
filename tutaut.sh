@@ -161,6 +161,23 @@ function launch_terminal()
 	xterm $XTERM_OPT_NAME -si -sk -sb -sl 10000 -rightbar $SHELL_TERMINAL &
 }
 
+function decrement_speed()
+{
+	MAX_WAIT_CHAR=$((MAX_WAIT_CHAR*11/10))
+	debug "new MAX_WAIT_CHAR: $MAX_WAIT_CHAR"
+}
+
+function increment_speed()
+{
+	NEW_MAX_WAIT_CHAR=$((MAX_WAIT_CHAR*9/10))
+	if [ $NEW_MAX_WAIT_CHAR -eq $MAX_WAIT_CHAR ]; then
+		MAX_WAIT_CHAR=$((MAX_WAIT_CHAR-1))
+	else
+		MAX_WAIT_CHAR=$NEW_MAX_WAIT_CHAR
+	fi
+	debug "new MAX_WAIT_CHAR: $MAX_WAIT_CHAR"
+}
+
 function speed_up()
 {
 	if [ -z "$FIXED_SPEED" ];then
@@ -493,6 +510,8 @@ function command_exec()
 {
 	debug "Executing command: $COMMAND"
 	case "$COMMAND" in
+	+) increment_speed; debug "increase speed";;
+	-) decrement_speed; debug "decrease speed";;
 	f) speed_up; debug "activate speed_up";;
 	F) slow_down; debug "activate slow_down";;
 	s) STOPPED=1; debug "Stopped";;
