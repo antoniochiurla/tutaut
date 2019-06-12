@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 . ../tutaut.sh
 
-BASE=/tmp/git-tutorial
+BASE=/tmp/git-tutorial-${ID_USER}
 rm -rf $BASE
 
 for OP in leader dev1 dev2; do operator $OP; clear_screen;done
