@@ -29,6 +29,7 @@ if [ -z "$TUTAUT" ]; then
 	VIDEO_FPS=25
 	OPERATOR=
 	declare -A OPERATORS
+	declare -A OPERATORS_GEOMETRY
 	WINDOW_TYPE=tmux
 	XTERM_SMALL_FONT=
 	BACKSPACES="\\h\\h\\h\\h\\h\\h\\h\\h\\h\\h"
@@ -154,11 +155,16 @@ function launch_terminal_on_existing_session()
 
 function launch_terminal()
 {
+	if [ -n "${OPERATORS_GEOMETRY[$OPERATOR]}" ]
+	then
+		XTERM_GEOMETRY=${OPERATORS_GEOMETRY[$OPERATOR]}
+	fi
 	if [ -n "$XTERM_SMALL_FONT" ]
 	then
 		XTERM_OPT_NAME="-name XTermNoTTF"
 	fi
-	xterm $XTERM_OPT_NAME -si -sk -sb -sl 10000 -rightbar $SHELL_TERMINAL &
+	xterm $XTERM_OPT_NAME -g $XTERM_GEOMETRY -si -sk -sb -sl 10000 -rightbar $SHELL_TERMINAL &
+	debug "Started xterm geometry: $XTERM_GEOMETRY"
 }
 
 function decrement_speed()

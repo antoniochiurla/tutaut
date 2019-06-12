@@ -4,6 +4,11 @@
 BASE=/tmp/git-tutorial-${ID_USER}
 rm -rf $BASE
 
+
+if [ -n "$LEADER_GEOM" ]; then OPERATORS_GEOMETRY[leader]=$LEADER_GEOM; fi
+if [ -n "$DEV1_GEOM" ]; then OPERATORS_GEOMETRY[dev1]=$DEV1_GEOM; fi
+if [ -n "$DEV2_GEOM" ]; then OPERATORS_GEOMETRY[dev2]=$DEV2_GEOM; fi
+
 for OP in leader dev1 dev2; do operator $OP; clear_screen;done
 
 work_begin
