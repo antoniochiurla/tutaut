@@ -476,6 +476,8 @@ function command_exec()
 {
 	debug "Executing command: $COMMAND"
 	case "$COMMAND" in
+	f) speed_up; debug "activate speed_up";;
+	F) slow_down; debug "activate slow_down";;
 	s) STOPPED=1; debug "Stopped";;
 	S) unset STOPPED; debug "Restarted";;
 	[0-9]) COMMAND_NUM=$COMMAND$COMMAND_NUM; debug "Num: $COMMAND_NUM";;
@@ -503,6 +505,11 @@ function pause()
 function git_init()
 {
 	send_command git init --bare
+}
+
+function git_config()
+{
+	send_command git config "$@"
 }
 
 function git_clone()
