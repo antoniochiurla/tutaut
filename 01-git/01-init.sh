@@ -8,8 +8,13 @@ rm -rf $BASE
 if [ -n "$LEADER_GEOM" ]; then OPERATORS_GEOMETRY[leader]=$LEADER_GEOM; fi
 if [ -n "$DEV1_GEOM" ]; then OPERATORS_GEOMETRY[dev1]=$DEV1_GEOM; fi
 if [ -n "$DEV2_GEOM" ]; then OPERATORS_GEOMETRY[dev2]=$DEV2_GEOM; fi
+if [ -n "$LEADER_SETUP_COMMAND" ]; then OPERATORS_SETUP_COMMAND[leader]=$LEADER_SETUP_COMMAND; fi
+if [ -n "$DEV1_SETUP_COMMAND" ]; then OPERATORS_SETUP_COMMAND[dev1]=$DEV1_SETUP_COMMAND; fi
+if [ -n "$DEV2_SETUP_COMMAND" ]; then OPERATORS_SETUP_COMMAND[dev2]=$DEV2_SETUP_COMMAND; fi
 
+speed_up
 for OP in leader dev1 dev2; do operator $OP; clear_screen;done
+slow_down
 
 work_begin
 
