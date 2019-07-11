@@ -3,7 +3,7 @@ if [ -z "$TUTAUT" ]; then
 	PATH_TUTAUT=$(dirname ${BASH_SOURCE[0]})
 	echo $PATH_TUTAUT
 	TUTAUT=1
-	SRC=src
+	[ -f set_default_values.sh ] && . set_default_values.sh
 	DEFAULT_MIN_WAIT_CHAR=0
 	DEFAULT_MAX_WAIT_CHAR=300
 	DEFAULT_WAIT_AFTER_SPACE=0.5
@@ -22,6 +22,7 @@ if [ -z "$TUTAUT" ]; then
 	WAIT_AFTER_COMMAND=$DEFAULT_WAIT_AFTER_COMMAND
 	WAIT_CHANGE_OPERATOR=$DEFAULT_WAIT_CHANGE_OPERATOR
 	WAIT_AFTER_INFO=$DEFAULT_WAIT_AFTER_INFO
+	WORK_LEVEL=0
 	SOUND_BUTTON_PRESS_MS=24
 	SOUND_BUTTONS_PRESS_MS=60
 	END_LAST_SOUND=0
@@ -30,6 +31,7 @@ if [ -z "$TUTAUT" ]; then
 	OPERATOR=
 	declare -A OPERATORS
 	declare -A OPERATORS_GEOMETRY
+	declare -A OPERATORS_SETUP_COMMAND
 	WINDOW_TYPE=tmux
 	XTERM_SMALL_FONT=
 	BACKSPACES="\\h\\h\\h\\h\\h\\h\\h\\h\\h\\h"
@@ -89,14 +91,22 @@ function debug()
 
 work_begin()
 {
+	WORK_LEVEL=$((WORK_LEVEL+1))
+	if [ -n "$EXEC_ON_WORK_BEGIN" ]; then
+		$EXEC_ON_WORK_BEGIN
+	fi
 	TIME_START=
 	now
-	echo "$LOG_PREFIX:begin:" >$FILE_LOG
+	echo "$LOG_PREFIX:begin:$WORK_LEVEL" >$FILE_LOG
 }
 
 work_end()
 {
-	echo "$LOG_PREFIX:end:" >>$FILE_LOG
+	echo "$LOG_PREFIX:end:$WORK_LEVEL" >>$FILE_LOG
+	WORK_LEVEL=$((WORK_LEVEL-1))
+	if [ -n "$EXEC_ON_WORK_END" ]; then
+		$EXEC_ON_WORK_END
+	fi
 }
 
 function operator()
@@ -125,10 +135,13 @@ function create_operator()
 		debug "renaming tmux session $FIRST_FREE_SESSION to $OPERATOR"
 		tmux rename-session -t$FIRST_FREE_SESSION $OPERATOR
 		tmux_set_option destroy-unattached on
-	else
-		launch_terminal_on_existing_session $OPERATOR
+	#else
+	#	launch_terminal_on_existing_session $OPERATOR
 	fi
+	send
 	OPERATORS[$OPERATOR]=1
+	SETUP_COMMAND=${OPERATORS_SETUP_COMMAND[$OPERATOR]}
+	[ -n "$SETUP_COMMAND" ] && send_command "$SETUP_COMMAND"
 }
 
 function launch_terminal_on_new_session()
@@ -371,6 +384,10 @@ function to_operator_direct()
 				n) debug "to_operator_direct newline"
 					tmux send -t$OPERATOR "
 "
+					sound_button_press 9
+					;;
+				\\) debug "to_operator_direct backslash"
+					tmux send -t$OPERATOR "\\"
 					sound_button_press 9
 					;;
 				h) debug "to_operator_direct backspace"
@@ -633,7 +650,7 @@ function git_log()
 
 function vi_open()
 {
-	FILE=${1:-$SRC}
+	FILE=${1}
 	send_command vim -n $FILE
 	send 1G
 }
