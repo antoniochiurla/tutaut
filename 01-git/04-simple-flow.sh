@@ -21,7 +21,7 @@ git_push
 
 speed_up
 operator dev2
-info "changes feature1"
+info "changes feature2"
 vi_open src1
 vi_search feature2
 slow_down
