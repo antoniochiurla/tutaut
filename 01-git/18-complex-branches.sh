@@ -72,7 +72,6 @@ git_pull
 for FEATURE in {1..6};do
 	info "merge feature $FEATURE branch in master branch"
 	git_merge --no-ff origin/feat$FEATURE
-	vi_insert_text "Manual "
 	vi_save_and_close
 done
 git_push
