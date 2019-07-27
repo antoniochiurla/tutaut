@@ -13,8 +13,8 @@ By now written using *vim* and composed by *bash* scripts
 * tmux
 
 ## known issues
-* sometimes, very rare in my own PC, commands repots some wrong chars, maybe due by communication with tmux or script internal text treating
-* random error writing and corresponding correction generate some wrong text
+* (fixed?) sometimes, very rare in my own PC, commands report some wrong chars, maybe due by communication with tmux or script internal text treating
+* (fixed?) random error writing and corresponding correction generate some wrong text
 
 ## composition
 * tutaut.sh
