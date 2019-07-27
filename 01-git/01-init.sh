@@ -13,7 +13,12 @@ if [ -n "$DEV1_SETUP_COMMAND" ]; then OPERATORS_SETUP_COMMAND[dev1]=$DEV1_SETUP_
 if [ -n "$DEV2_SETUP_COMMAND" ]; then OPERATORS_SETUP_COMMAND[dev2]=$DEV2_SETUP_COMMAND; fi
 
 speed_up
-for OP in leader dev1 dev2; do operator $OP; clear_screen;done
+for OP in leader dev1 dev2
+do
+	operator $OP
+	send_command alias vim="vim -n"
+       	clear_screen
+done
 slow_down
 
 work_begin

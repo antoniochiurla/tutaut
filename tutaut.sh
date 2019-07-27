@@ -651,7 +651,7 @@ function git_log()
 function vi_open()
 {
 	FILE=${1}
-	send_command vim -n $FILE
+	send_command vim $FILE
 	send 1G
 }
 
