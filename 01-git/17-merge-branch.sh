@@ -36,3 +36,5 @@ git_pull
 git_log
 info in log is noticeable the branch used for feature1 changes
 print_file src1
+pause 5
+work_end

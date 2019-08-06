@@ -48,3 +48,5 @@ for CHANGE in {2..2}; do
 done
 
 print_file src1
+pause 5
+work_end

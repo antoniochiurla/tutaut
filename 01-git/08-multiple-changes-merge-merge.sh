@@ -45,3 +45,5 @@ operator leader
 git_pull
 git_log
 print_file src1
+pause 5
+work_end

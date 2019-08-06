@@ -24,6 +24,7 @@ git_push
 FEATURES="0 2 4"
 CHANGES="1 2 3 4"
 
+speed_up
 info "Developers clone the repository"
 for DEV in 1 2; do
 	operator dev$DEV
@@ -32,6 +33,7 @@ for DEV in 1 2; do
 	git_clone $BASE/public/project
 	change_dir project
 done
+slow_down
 info "Developers create branches for features"
 for FEAT in $FEATURES;do
 	for DEV in 1 2; do
@@ -77,3 +79,5 @@ operator leader
 git_pull
 git_log
 print_file src1
+pause 5
+work_end

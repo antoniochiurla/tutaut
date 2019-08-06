@@ -51,3 +51,5 @@ git_log
 info the work is stored on origin/feat1 branch
 info the master branch is untouched
 print_file src1
+pause 5
+work_end
