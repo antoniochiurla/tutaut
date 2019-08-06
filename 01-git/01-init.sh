@@ -16,7 +16,7 @@ speed_up
 for OP in leader dev1 dev2
 do
 	operator $OP
-	send_command alias vim="vim -n"
+	send_command 'alias vim="vim -n"'
        	clear_screen
 done
 slow_down
