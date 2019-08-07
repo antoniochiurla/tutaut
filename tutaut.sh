@@ -176,7 +176,7 @@ function launch_terminal()
 	then
 		XTERM_OPT_NAME="-name XTermNoTTF"
 	fi
-	xterm $XTERM_OPT_NAME -g $XTERM_GEOMETRY -si -sk -sb -sl 10000 -rightbar $SHELL_TERMINAL &
+	xterm $XTERM_OPT_NAME -ah -g $XTERM_GEOMETRY -si -sk -sb -sl 10000 -rightbar $SHELL_TERMINAL &
 	debug "Started xterm geometry: $XTERM_GEOMETRY"
 }
 
