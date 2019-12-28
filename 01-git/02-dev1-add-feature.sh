@@ -10,6 +10,8 @@ create_dir $BASE/dev1
 change_dir $BASE/dev1
 git_clone $BASE/public/project
 change_dir project
+git_config user.name "dev1"
+git_config user.email "dev1@tutaut"
 info "... add feature1 on source file"
 vi_open src1
 vi_search second

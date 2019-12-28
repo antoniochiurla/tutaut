@@ -11,6 +11,8 @@ create_dir $BASE/dev2
 change_dir $BASE/dev2
 git_clone $BASE/public/project
 change_dir project
+git_config user.name "dev2"
+git_config user.email "dev2@tutaut"
 info "... add feature2 on source file"
 vi_open src1
 vi_search feature1
