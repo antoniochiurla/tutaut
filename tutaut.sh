@@ -98,6 +98,7 @@ work_begin()
 	TIME_START=
 	now
 	echo "$LOG_PREFIX:begin:$WORK_LEVEL" >$FILE_LOG
+	END_LAST_SOUND=0
 }
 
 work_end()
