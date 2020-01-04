@@ -245,7 +245,7 @@ function wait_after_command()
 
 function wait_command_if_stopped()
 {
-	debug "wait command if stopped"
+	debug "wait command if stopped: $STOPPED"
 	while [ -n "$STOPPED" -a "${STEP_ON:-0}" -lt 1 ]; do
 		command_check
 	done
@@ -254,7 +254,7 @@ function wait_command_if_stopped()
 function wait_before_char()
 {
 	wait_command_if_stopped
-	[ -n "$STEP_ON" ] && STEP_ON=$((STEP_ON-1)) && [ "$STEP_ON" -eq 0 ] && STOPPED=1
+	[ -n "$STEP_ON" ] && debug "Step:$STEP_ON" && STEP_ON=$((STEP_ON-1)) && [ "$STEP_ON" -eq 0 ] && STOPPED=1
 	TRY_ON_100=$((RANDOM%100))
 	if [ $TRY_ON_100 -ge 40 ]; then
 		WAIT_BEFORE_CHAR_AMOUNT=$((MIN_WAIT_CHAR+RANDOM))
@@ -332,18 +332,19 @@ function sound_button_press()
 	#return
 	if [ -n "$SOX_PLAY" ];then
 		now
+		debug "for_sound: $TIME_ELAPSED - $END_LAST_SOUND"
 		if [ $TIME_ELAPSED -gt $END_LAST_SOUND ]; then
-			if [ -n "$1" ]; then
+			if [ "$1" -gt 0 ]; then
 				PLAY_VOLUME=$1
 			else
 				PLAY_VOLUME=$((RANDOM%5+3))
 			fi
-			typed_log keyboard_button
 			$SOX_PLAY --volume 0.$PLAY_VOLUME $PATH_TUTAUT/keyboard_button_press.mp3 2>/dev/null&
 			now
 			END_LAST_SOUND=$((TIME_ELAPSED+SOUND_BUTTON_PRESS_MS))
 		fi
 	fi
+	typed_log keyboard_button $2
 }
 
 function sound_buttons_press()
@@ -353,11 +354,11 @@ function sound_buttons_press()
 		now
 		if [ $TIME_ELAPSED -gt $END_LAST_SOUND ]; then
 			PLAY_VOLUME=$((RANDOM%5+1))
-			typed_log keyboard_buttons
 			$SOX_PLAY --volume 0.$PLAY_VOLUME $PATH_TUTAUT/keyboard_buttons_press.mp3 2>/dev/null&
 			END_LAST_SOUND=$((TIME_ELAPSED+SOUND_BUTTONS_PRESS_MS))
 		fi
 	fi
+	typed_log keyboard_buttons "$*"
 }
 
 function to_operator()
@@ -385,15 +386,15 @@ function to_operator_direct()
 				n) debug "to_operator_direct newline"
 					tmux send -t$OPERATOR "
 "
-					sound_button_press 9
+					sound_button_press 9 "\\$CONTROL"
 					;;
 				\\) debug "to_operator_direct backslash"
 					tmux send -t$OPERATOR "\\"
-					sound_button_press 9
+					sound_button_press 9 "\\$CONTROL"
 					;;
 				h) debug "to_operator_direct backspace"
 					tmux send -t$OPERATOR ""
-					sound_button_press 9
+					sound_button_press 9 "\\$CONTROL"
 					;;
 				*) debug "ERROR unknown \\$CONTROL control key"
 					;;
@@ -401,9 +402,9 @@ function to_operator_direct()
 		else
 			debug "to_operator_direct: $DIRECT_CH"
 			if [ ${#DIRECT_CH} -gt 2 ]; then
-				sound_buttons_press
+				sound_buttons_press "$DIRECT_CH"
 			else
-				sound_button_press
+				sound_button_press 0 "$DIRECT_CH"
 			fi
 			tmux send -t$OPERATOR -- "$DIRECT_CH"
 		fi
@@ -519,11 +520,13 @@ function command_check()
 		else
 			NUM_WAIT_COMMAND=99999
 		fi
+		WAIT_COMMAND=$((NUM_WAIT_COMMAND%100000+100000))
+		ARG_READ_TIMEOUT=0.${WAIT_COMMAND:1}
+		debug "waiting command $ARG_READ_TIMEOUT"
+		read -t ${ARG_READ_TIMEOUT} COMMAND
+	else
+		read -s -t 0.001 COMMAND
 	fi
-	WAIT_COMMAND=$((NUM_WAIT_COMMAND%100000+100000))
-	ARG_READ_TIMEOUT=0.${WAIT_COMMAND:1}
-	debug "waiting command $ARG_READ_TIMEOUT"
-	read -t ${ARG_READ_TIMEOUT} COMMAND
 	if [ -n "$COMMAND" ]; then
 		command_exec "$COMMAND"
 		NUM_WAIT_COMMAND=1
@@ -540,8 +543,8 @@ function command_exec()
 	F) slow_down; debug "activate slow_down";;
 	s) STOPPED=1; debug "Stopped";;
 	S) unset STOPPED; debug "Restarted";;
-	[0-9]) COMMAND_NUM=$COMMAND$COMMAND_NUM; debug "Num: $COMMAND_NUM";;
-	+) STEP_ON=${COMMAND_NUM:-1}; COMMAND_NUM= ; debug "Step on: $STEP_ON";;
+	[0-9]) COMMAND_NUM=$COMMAND_NUM$COMMAND; debug "Num: $COMMAND_NUM";;
+	o) STEP_ON=${COMMAND_NUM:-1}; COMMAND_NUM= ; debug "Step on: $STEP_ON";;
 	esac
 }
 
@@ -649,6 +652,11 @@ function git_log()
 	send_command "git log --graph --oneline --decorate=short --all | cat"
 }
 
+function git_status()
+{
+	send_command "git status"
+}
+
 function vi_open()
 {
 	FILE=${1}
@@ -661,6 +669,11 @@ function vi_search()
 	send_command "/$1"
 }
 
+function vi_find_char()
+{
+	send "f$1"
+}
+
 function vi_insert_text()
 {
 	send "i$*"
@@ -669,6 +682,16 @@ function vi_insert_text()
 function vi_add_line()
 {
 	send "o$*"
+}
+
+function vi_append_to_line()
+{
+	send "A$*"
+}
+
+function vi_change_line_from_cursor()
+{
+	send "C$*"
 }
 
 function vi_delete_line()
