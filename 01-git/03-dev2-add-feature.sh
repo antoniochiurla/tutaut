@@ -6,14 +6,14 @@ FIXED_SPEED=1 .  02-dev1-add-feature.sh
 
 slow_down
 operator dev2
-info "Dev2 clones the repository"
+info "Dev2 clona il progetto"
 create_dir $BASE/dev2
 change_dir $BASE/dev2
 git_clone $BASE/public/project
 change_dir project
 git_config user.name "dev2"
 git_config user.email "dev2@tutaut"
-info "... add feature2 on source file"
+info "... aggiunge feature2 nel file src1"
 vi_open src1
 vi_search feature1
 vi_add_line
@@ -21,14 +21,14 @@ vi_add_line
 vi_add_line
 vi_add_line feature2
 vi_save_and_close
-info "... add src1 to index and commit"
+info "... aggiunge il file src1 all'indice e crea un commit"
 git_add src1
 git_commit feature 2
-info "... pushes changes"
+info "... spedisce le modifiche"
 git_push
 
 operator leader
-info "Leader checks work done"
+info "Leader controlla il lavoro fatto"
 git_pull
 git_log
 print_file src1

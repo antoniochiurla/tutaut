@@ -24,36 +24,39 @@ slow_down
 work_begin
 
 operator leader
-info "Leader creates the central repository"
+info "Leader crea il repository centrale"
 create_dir $BASE/public/project
 change_dir $BASE/public/project
 git_init
 pause
-info "Creates his own local repository cloning the central"
+info "Crea la sua copia locale clonando il repository centrale"
 create_dir $BASE/leader
 change_dir $BASE/leader
 git_clone $BASE/public/project
 change_dir project
-info "Set up his name for identity"
+info "Imposta la sua identità"
 git_config user.name "leader"
 git_config user.email "leader@tutaut"
 pause
-info "Then creates first file to project"
+info "Quindi crea il primo file nel progetto"
 vi_open src1
 vi_change_line Initial content first line
 vi_add_line Initial content second line
 vi_save_and_close
 pause
-info "Finally add the file to the index..."
+info "Aggiunge il file all'indice..."
 git_add src1
 pause
-info "... record changes to the repository invoking commit"
+info "... crea un commit con le modifiche aggiunte all'indice"
 git_commit
 pause
-info "... update remote refs invoking push"
+info "... spedisce le modifiche al repository centrale"
 git_push
 pause
-info "Show actual log"
+info "Controlla le operazioni fatte"
 git_log
+pause
+info "Controlla lo stato del progetto"
+git_status
 pause 5
 work_end
