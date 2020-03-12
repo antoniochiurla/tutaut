@@ -34,7 +34,7 @@ create_dir $BASE/leader
 change_dir $BASE/leader
 git_clone $BASE/public/project
 change_dir project
-info "Imposta la sua identità"
+info "Imposta la sua identita'"
 git_config user.name "leader"
 git_config user.email "leader@tutaut"
 pause

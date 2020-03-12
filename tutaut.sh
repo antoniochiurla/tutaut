@@ -39,6 +39,7 @@ if [ -z "$TUTAUT" ]; then
 	ID_USER=$(id --user)
 	FILE_LOG=/tmp/tutaut${ID_USER}.log
 	FILE_DEBUG=/tmp/tutaut${ID_USER}.debug
+	FILE_TRACE=/tmp/tutaut${ID_USER}.trace
 	echo -n >$FILE_LOG
 	echo -n >$FILE_DEBUG
 	if which play >/dev/null 2>&1
@@ -47,6 +48,7 @@ if [ -z "$TUTAUT" ]; then
 	fi
 	stty -icanon min 1
 	COMMAND_KEY_STEP=" "
+	[ -n "$TRACE" ] && exec 2>$FILE_TRACE && set -x
 fi
 
 
@@ -75,7 +77,7 @@ function typed_log()
 function info()
 {
 	now
-	echo "$*" 1>&2
+	echo "$*"
 	echo "$LOG_PREFIX:info:$*" >>$FILE_LOG
 	sleep $WAIT_AFTER_INFO
 }
@@ -89,10 +91,20 @@ function debug()
 	fi
 }
 
+unlock_when_hang()
+{
+	PROC=$1
+	while test -d /proc/${PROC}; do
+		sleep 1
+		echo -ne " " >/proc/${PROC}/fd/0
+	done
+}
+
 work_begin()
 {
 	WORK_LEVEL=$((WORK_LEVEL+1))
 	if [ -n "$EXEC_ON_WORK_BEGIN" ]; then
+		unlock_when_hang $$&
 		$EXEC_ON_WORK_BEGIN
 	fi
 	TIME_START=
@@ -245,7 +257,7 @@ function wait_after_command()
 
 function wait_command_if_stopped()
 {
-	debug "wait command if stopped: $STOPPED"
+	debug "wait_command_if_stopped: $STOPPED"
 	while [ -n "$STOPPED" -a "${STEP_ON:-0}" -lt 1 ]; do
 		command_check
 	done
@@ -344,7 +356,7 @@ function sound_button_press()
 			END_LAST_SOUND=$((TIME_ELAPSED+SOUND_BUTTON_PRESS_MS))
 		fi
 	fi
-	typed_log keyboard_button $2
+	typed_log keyboard_button $OPERATOR:$2
 }
 
 function sound_buttons_press()
@@ -358,7 +370,7 @@ function sound_buttons_press()
 			END_LAST_SOUND=$((TIME_ELAPSED+SOUND_BUTTONS_PRESS_MS))
 		fi
 	fi
-	typed_log keyboard_buttons "$*"
+	typed_log keyboard_buttons "$OPERATOR:$*"
 }
 
 function to_operator()
@@ -367,7 +379,7 @@ function to_operator()
 	CH="$1"
 	debug "to_operator: $CH"
 	wait_before_char
-	if [ "$WAIT_BEFORE_CHAR_MS" -eq 0 ];then
+	if [ "$WAIT_BEFORE_CHAR_MS" -eq 0 -a 1 -eq 2 ];then
 		BUFFER+="$CH"
 		debug "buffer: $BUFFER"
 	else
@@ -537,6 +549,7 @@ function command_exec()
 {
 	debug "Executing command: $COMMAND"
 	case "$COMMAND" in
+	' ') false;; # ignoring blank, used to unlock read when unexplainable hang
 	+) increment_speed; debug "increase speed";;
 	-) decrement_speed; debug "decrease speed";;
 	f) speed_up; debug "activate speed_up";;

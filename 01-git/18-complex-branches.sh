@@ -10,7 +10,7 @@ operator leader
 git_pull
 vi_open src1
 vi_search second
-for FEATURE in {1..6};do
+for FEATURE in {1..4};do
 	vi_add_line
 	vi_add_line
 	vi_add_line
@@ -21,10 +21,11 @@ git_add src1
 git_commit stubs for features 1 to 6
 info "Leader pushes changes"
 git_push
-FEATURES="0 2 4"
-CHANGES="1 2 3 4"
+FEATURES="0 2"
+CHANGES="1 2 3"
 
 info "Developers clone the repository"
+speed_up
 for DEV in 1 2; do
 	operator dev$DEV
 	create_dir $BASE/dev$DEV
@@ -32,6 +33,7 @@ for DEV in 1 2; do
 	git_clone $BASE/public/project
 	change_dir project
 done
+slow_down
 info "Developers create branches for features"
 for FEAT in $FEATURES;do
 	for DEV in 1 2; do
@@ -69,16 +71,21 @@ operator leader
 info "Leader switch to master branch"
 git_checkout master
 git_pull
-for FEATURE in {1..6};do
+info "Shows branches status"
+git_log
+pause 2
+for FEATURE in {1..4};do
 	info "merge feature $FEATURE branch in master branch"
 	git_merge --no-ff origin/feat$FEATURE
+	vi_change_line Merge feature$FEATURE
 	vi_save_and_close
+	[ $FEATURE = 2 ] && speed_up
 done
+slow_down
 git_push
 
 info "Leader check work done"
 operator leader
-git_pull
 git_log
 print_file src1
 pause 5
