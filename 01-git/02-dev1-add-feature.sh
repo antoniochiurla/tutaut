@@ -4,7 +4,7 @@ speed_up
 FIXED_SPEED=1 . 01-init.sh
 
 slow_down
-operator dev1
+view_operator dev1
 info "Dev1 clona il progetto"
 create_dir $BASE/dev1
 change_dir $BASE/dev1
@@ -26,7 +26,7 @@ git_commit feature 1
 info "... spedisce le modifiche"
 git_push
 
-operator leader
+view_operator leader
 info "Leader controlla il lavoro fatto"
 git_pull
 git_log

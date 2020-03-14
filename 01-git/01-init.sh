@@ -15,7 +15,7 @@ if [ -n "$DEV2_SETUP_COMMAND" ]; then OPERATORS_SETUP_COMMAND[dev2]=$DEV2_SETUP_
 speed_up
 for OP in leader dev1 dev2
 do
-	operator $OP
+	view_operator $OP
 	send_command 'alias vim="vim -n"'
        	clear_screen
 done
@@ -23,7 +23,7 @@ slow_down
 
 work_begin
 
-operator leader
+view_operator leader
 info "Leader crea il repository centrale"
 create_dir $BASE/public/project
 change_dir $BASE/public/project

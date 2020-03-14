@@ -4,7 +4,7 @@
 speed_up
 FIXED_SPEED=1 . 03-dev2-add-feature.sh
 
-operator dev1
+view_operator dev1
 info "Dev1 updates project"
 git_pull
 info "Dev1 make intruder change to feature2"
@@ -26,7 +26,7 @@ git_add src1
 git_commit feature 2.intruder.again
 git_push
 
-operator dev2
+view_operator dev2
 info "Dev2 make change feature2"
 vi_open src1
 vi_search feature2
@@ -55,7 +55,7 @@ git_rebase_continue
 info "pushes"
 git_push
 
-operator leader
+view_operator leader
 info "Leader checks work done"
 git_pull
 git_log

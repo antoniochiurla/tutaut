@@ -7,7 +7,7 @@ FIXED_SPEED=1 . 03-dev2-add-feature.sh
 for CHANGE in {1..1}; do
 	slow_down
 	for SUBCHANGE in {1..3}; do
-		operator dev1
+		view_operator dev1
 		info "Dev1 updates project"
 		git_pull_noff
 		vi_save_and_close
@@ -24,7 +24,7 @@ for CHANGE in {1..1}; do
 		info "pushes"
 		git_push
 		pause
-		operator leader
+		view_operator leader
 		info "Leader updates project"
 		git_pull_noff
 		pause
@@ -40,7 +40,7 @@ for CHANGE in {1..1}; do
 		info "pushes"
 		git_push
 		pause
-		operator dev2
+		view_operator dev2
 		info "Dev2 updates project"
 		git_pull_noff
 		pause
@@ -55,7 +55,7 @@ for CHANGE in {1..1}; do
 		git_commit feature 2 change $CHANGE.$SUBCHANGE
 	done
 
-	operator dev2
+	view_operator dev2
 	info "Dev2 updates project before push"
 	git_pull_noff
 	vi_save_and_close
@@ -64,7 +64,7 @@ for CHANGE in {1..1}; do
 done
 
 info "Leader checks work done"
-operator leader
+view_operator leader
 git_pull
 git_log
 print_file src1

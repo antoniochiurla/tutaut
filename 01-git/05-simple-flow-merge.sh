@@ -6,7 +6,7 @@ DEBUG=1
 speed_up
 FIXED_SPEED=1 . 03-dev2-add-feature.sh
 
-operator dev1
+view_operator dev1
 info "Dev1 aggiorna la sua copia locale del progetto"
 git_pull
 info "modifica feature1"
@@ -21,7 +21,7 @@ git_commit feature 1.1
 git_push
 
 speed_up
-operator dev2
+view_operator dev2
 info "Dev2 modifica feature2"
 vi_open src1
 vi_search feature2
@@ -37,7 +37,7 @@ vi_save_and_close
 info "spedisce le modifiche"
 git_push
 
-operator leader
+view_operator leader
 info "Leader controlla il lavoro fatto"
 git_pull
 git_log

@@ -5,7 +5,7 @@ speed_up
 FIXED_SPEED=1 . 01-init.sh
 
 info Leader create stubs for features
-operator leader
+view_operator leader
 git_pull
 vi_open src1
 vi_search second
@@ -23,7 +23,7 @@ git_commit stubs for features 1 and 2
 git_push
 
 info dev1 clone repository
-operator dev1
+view_operator dev1
 create_dir $BASE/dev1
 change_dir $BASE/dev1
 git_clone $BASE/public/project
@@ -44,7 +44,7 @@ git_commit feature 1.1
 info ... push changes
 git_push
 
-operator leader
+view_operator leader
 git_pull
 info Leader check the log
 git_log

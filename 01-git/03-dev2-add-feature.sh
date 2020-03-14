@@ -5,7 +5,7 @@ speed_up
 FIXED_SPEED=1 .  02-dev1-add-feature.sh
 
 slow_down
-operator dev2
+view_operator dev2
 info "Dev2 clona il progetto"
 create_dir $BASE/dev2
 change_dir $BASE/dev2
@@ -27,7 +27,7 @@ git_commit feature 2
 info "... spedisce le modifiche"
 git_push
 
-operator leader
+view_operator leader
 info "Leader controlla il lavoro fatto"
 git_pull
 git_log

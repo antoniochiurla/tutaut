@@ -5,11 +5,11 @@ speed_up
 FIXED_SPEED=1 . 03-dev2-add-feature.sh
 
 for CHANGE in {2..3}; do
-	operator dev1
+	view_operator dev1
 	git_pull
 	for SUBCHANGE in {1..4}; do
 		info "Dev1 esegue la modifica $CHANGE.$SUBCHANGE"
-		operator dev1
+		view_operator dev1
 		vi_open src1
 		vi_search feature1
 		vi_change_line feature1.$CHANGE.$SUBCHANGE
@@ -24,7 +24,7 @@ for CHANGE in {2..3}; do
 		git_push
 	done
 
-	operator dev2
+	view_operator dev2
 	info "Dev2 esegue la modifica $CHANGE"
 	vi_open src1
 	vi_search feature2
@@ -41,7 +41,7 @@ for CHANGE in {2..3}; do
 done
 
 info "Leader controlla la lista delle modifiche"
-operator leader
+view_operator leader
 git_pull
 git_log
 print_file src1

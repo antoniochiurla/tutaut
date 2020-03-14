@@ -122,7 +122,7 @@ work_end()
 	fi
 }
 
-function operator()
+function view_operator()
 {
 	PREV_OPERATOR=$OPERATOR
 	OPERATOR=$1
@@ -136,6 +136,14 @@ function operator()
 		sleep $WAIT_CHANGE_OPERATOR
 		now
 		echo "$LOG_PREFIX:arrive_to_operator:$OPERATOR" >>$FILE_LOG
+	fi
+}
+
+function select_operator()
+{
+	OPERATOR=$1
+	if [ -z "${OPERATORS[$OPERATOR]}" ]; then
+		create_operator
 	fi
 }
 

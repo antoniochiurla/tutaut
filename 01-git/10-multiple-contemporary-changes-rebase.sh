@@ -7,7 +7,7 @@ FIXED_SPEED=1 . 03-dev2-add-feature.sh
 for CHANGE in {1..1}; do
 	slow_down
 	for SUBCHANGE in {1..3}; do
-		operator dev1
+		view_operator dev1
 		info "Dev1 aggiorna la copia locale"
 		git_pull
 		info "Dev1 esegue la modifica $CHANGE.$SUBCHANGE"
@@ -24,7 +24,7 @@ for CHANGE in {1..1}; do
 		info "spedisce le modifiche"
 		git_push
 		pause
-		operator leader
+		view_operator leader
 		info "Leader aggiorna la copia locale"
 		git_pull
 		pause
@@ -41,7 +41,7 @@ for CHANGE in {1..1}; do
 		info "spedisce le modifiche"
 		git_push
 		pause
-		operator dev2
+		view_operator dev2
 		info "Dev2 aggiorna la copia locale"
 		git_pull_rebase
 		pause
@@ -57,7 +57,7 @@ for CHANGE in {1..1}; do
 		git_commit feature 2 change $CHANGE.$SUBCHANGE
 	done
 
-	operator dev2
+	view_operator dev2
 	info "Dev2 aggiorna la copia locale prima di spedire le modifiche"
 	git_pull
 	#vi_save_and_close
@@ -66,7 +66,7 @@ for CHANGE in {1..1}; do
 done
 
 info "Leader controlla la lista delle modifiche"
-operator leader
+view_operator leader
 git_pull
 git_log
 print_file src1
