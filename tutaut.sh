@@ -12,6 +12,8 @@ if [ -z "$TUTAUT" ]; then
 	DEFAULT_WAIT_CHANGE_OPERATOR=3.0
 	DEFAULT_WAIT_AFTER_INFO=3.0
 	DEFAULT_ERRORS_PERCENT=5
+	DEFAULT_LANGUAGE=IT
+	LANGUAGE=${LANGUAGE:-$DEFAULT_LANGUAGE}
 	DO_PAUSE=1
 	DEFAULT_PAUSE=3
 	NUM_WAIT_COMMAND=1
@@ -40,6 +42,7 @@ if [ -z "$TUTAUT" ]; then
 	FILE_LOG=/tmp/tutaut${ID_USER}.log
 	FILE_DEBUG=/tmp/tutaut${ID_USER}.debug
 	FILE_TRACE=/tmp/tutaut${ID_USER}.trace
+	DIR_SCREENSHOTS=/tmp/tutaut${ID_USER}.screens
 	echo -n >$FILE_LOG
 	echo -n >$FILE_DEBUG
 	if which play >/dev/null 2>&1
@@ -74,11 +77,18 @@ function typed_log()
 	echo "$LOG_PREFIX:$TYPE:$*" >>$FILE_LOG
 }
 
+# first argument for English language
+# second argument for Italian language
 function info()
 {
 	now
-	echo "$*"
-	echo "$LOG_PREFIX:info:$*" >>$FILE_LOG
+	case "$LANGUAGE" in
+	EN)	INFO="$1";;
+	IT)	INFO="$2";;
+	esac
+	if [ -z "$INFO" ]; then INFO="$1"; fi
+	echo "$INFO"
+	echo "$LOG_PREFIX:info:$INFO" >>$FILE_LOG
 	sleep $WAIT_AFTER_INFO
 }
 
@@ -110,6 +120,7 @@ work_begin()
 	TIME_START=
 	now
 	echo "$LOG_PREFIX:begin:$WORK_LEVEL" >$FILE_LOG
+	screenshots_clear
 	END_LAST_SOUND=0
 }
 
@@ -271,6 +282,33 @@ function wait_command_if_stopped()
 	done
 }
 
+screenshots_clear()
+{
+	rm -rf $DIR_SCREENSHOTS
+}
+
+screenshot_operators()
+{
+	for OP in ${!OPERATORS[@]}; do
+		screenshot_operator $OP
+	done
+}
+
+screenshot_operator()
+{
+	OP_SCREENSHOT=${1:-$OPERATOR}
+	FRAME_NUM_FORMATTED=$(printf "%06d" $FRAME_NUM)
+	PATH_SCREENSHOTS_OPERATOR="$DIR_SCREENSHOTS/$OP_SCREENSHOT"
+	mkdir -p $PATH_SCREENSHOTS_OPERATOR
+	PATH_SCREENSHOT="$PATH_SCREENSHOTS_OPERATOR/$FRAME_NUM_FORMATTED"
+	if [ -f "$PATH_SCREENSHOT" ]; then
+		return
+	fi
+	tmux capture-pane -t$OP_SCREENSHOT
+	tmux save-buffer $PATH_SCREENSHOT
+	typed_log screenshot $OP_SCREENSHOT
+}
+
 function wait_before_char()
 {
 	wait_command_if_stopped
@@ -284,6 +322,7 @@ function wait_before_char()
 	else
 		WAIT_BEFORE_CHAR_MS=0
 	fi
+	screenshot_operators
 }
 
 : "
@@ -412,6 +451,10 @@ function to_operator_direct()
 					tmux send -t$OPERATOR "\\"
 					sound_button_press 9 "\\$CONTROL"
 					;;
+				t) debug "to_operator_direct tab"
+					tmux send -t$OPERATOR "	"
+					sound_button_press 9 "\\$CONTROL"
+					;;
 				h) debug "to_operator_direct backspace"
 					tmux send -t$OPERATOR ""
 					sound_button_press 9 "\\$CONTROL"
@@ -425,6 +468,9 @@ function to_operator_direct()
 				sound_buttons_press "$DIRECT_CH"
 			else
 				sound_button_press 0 "$DIRECT_CH"
+			fi
+			if [ "$DIRECT_CH" = ";" ]; then
+				DIRECT_CH="\\;"
 			fi
 			tmux send -t$OPERATOR -- "$DIRECT_CH"
 		fi
@@ -503,14 +549,27 @@ function send()
 	send_flush
 }
 
+function scroll_lines()
+{
+	HOW_MANY_LINES=${1:-3}
+	while [ "$HOW_MANY_LINES" -gt 0 ]; do
+		DONT_WAIT=1 send_command
+		HOW_MANY_LINES=$((HOW_MANY_LINES-1))
+	done
+}
+
 function send_command()
 {
 	ALLOW_ERRORS=1
 	send "$*"
 	ALLOW_ERRORS=
-	wait_before_enter
+	if [ -z "$DONT_WAIT" ]; then
+		wait_before_enter
+	fi
 	send "\n"
-	wait_after_command
+	if [ -z "$DONT_WAIT" ]; then
+		wait_after_command
+	fi
 }
 
 function change_dir()
@@ -551,6 +610,7 @@ function command_check()
 		command_exec "$COMMAND"
 		NUM_WAIT_COMMAND=1
 	fi
+	screenshot_operators
 }
 
 function command_exec()
@@ -576,6 +636,27 @@ function do_suspend()
 }
 
 function pause()
+{
+	if [ -n "$DO_PAUSE" ]
+	then
+		FRAME_PAUSE=$((1000/VIDEO_FPS))
+		FRAME_PAUSE=$(printf "0.%03d" $FRAME_PAUSE)
+		TIMEOUT=${1:-$DEFAULT_PAUSE}
+		FRAMES_PAUSE=$((TIMEOUT*VIDEO_FPS))
+		PAUSE=
+		debug "Waiting for $TIMEOUT... $FRAME_PAUSE x $FRAMES_PAUSE"
+		FRAME_PAUSED=0
+		while [ -z "$PAUSE" -a "$FRAME_PAUSED" -lt "$FRAMES_PAUSE" ]; do
+			debug "Waiting for $FRAME_PAUSE..."
+			read -t$FRAME_PAUSE PAUSE
+			FRAME_PAUSED=$((FRAME_PAUSED+1))
+			now
+			screenshot_operators
+		done
+	fi
+}
+
+function pause_old()
 {
 	if [ -n "$DO_PAUSE" ]
 	then
