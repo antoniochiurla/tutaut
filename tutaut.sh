@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 if [ -z "$TUTAUT" ]; then
 	PATH_TUTAUT=$(dirname ${BASH_SOURCE[0]})
-	echo $PATH_TUTAUT
+	TUTAUT_BASE=$(dirname $0)
+	TUTAUT_BASE=$(readlink -f $TUTAUT_BASE)
+	TUTAUT_TITLE=$(basename $0 .sh)
+	#echo $PATH_TUTAUT
 	TUTAUT=1
 	[ -f set_default_values.sh ] && . set_default_values.sh
 	DEFAULT_MIN_WAIT_CHAR=0
@@ -34,15 +37,23 @@ if [ -z "$TUTAUT" ]; then
 	declare -A OPERATORS
 	declare -A OPERATORS_GEOMETRY
 	declare -A OPERATORS_SETUP_COMMAND
+	declare -A OPERATORS_LAST_SHOT
+	declare -A OPERATORS_CURSOR_FRAME
+	declare -A OPERATORS_CURSOR_POS
 	WINDOW_TYPE=tmux
 	XTERM_SMALL_FONT=
 	BACKSPACES="\\h\\h\\h\\h\\h\\h\\h\\h\\h\\h"
 	BACKSPACES_NOT_ESCAPED=""
-	ID_USER=$(id --user)
-	FILE_LOG=/tmp/tutaut${ID_USER}.log
-	FILE_DEBUG=/tmp/tutaut${ID_USER}.debug
-	FILE_TRACE=/tmp/tutaut${ID_USER}.trace
-	DIR_SCREENSHOTS=/tmp/tutaut${ID_USER}.screens
+	ID_USER=$(id -u)
+	TUTAUT_OUTPUT_BASE=${TUTAUT_OUTPUT_BASE:-/tmp/tutaut$ID_USER}
+	TUTAUT_OUTPUT_PATH=${TUTAUT_OUTPUT_BASE}/$TUTAUT_TITLE
+	rm -rf $TUTAUT_OUTPUT_PATH
+	mkdir -p $TUTAUT_OUTPUT_PATH
+	FILE_LOG=$TUTAUT_OUTPUT_PATH/$TUTAUT_TITLE.log
+	FILE_DEBUG=$TUTAUT_OUTPUT_PATH/$TUTAUT_TITLE.debug
+	FILE_TRACE=$TUTAUT_OUTPUT_PATH/$TUTAUT_TITLE.trace
+	DIR_SCREENSHOTS=$TUTAUT_OUTPUT_PATH/$TUTAUT_TITLE.screens
+	SCREENSHOT_ACTIVE=0
 	echo -n >$FILE_LOG
 	echo -n >$FILE_DEBUG
 	if which play >/dev/null 2>&1
@@ -57,9 +68,16 @@ fi
 
 function now()
 {
-	TIME_NOW=$(date +%s%N)
+	#TIME_NOW=$(date +%s%N)
+	TIME_NOW=${EPOCHREALTIME/%???}
+	TIME_NOW=${TIME_NOW/.}
+	time_format
+}
+
+function time_format()
+{
 	TIME_START=${TIME_START:-$TIME_NOW}
-	TIME_ELAPSED=$(((TIME_NOW-TIME_START)/1000000))
+	TIME_ELAPSED=$((TIME_NOW-TIME_START))
 	FRAME_NUM=$((TIME_ELAPSED*VIDEO_FPS/1000))
 	LOG_PREFIX=$TIME_ELAPSED:$FRAME_NUM
 }
@@ -73,7 +91,12 @@ function typed_log()
 {
 	TYPE="$1"
 	shift
-	now
+	if [ "$1" = "-p" ]; then
+		time_format
+		shift
+	else
+		now
+	fi
 	echo "$LOG_PREFIX:$TYPE:$*" >>$FILE_LOG
 }
 
@@ -89,7 +112,7 @@ function info()
 	if [ -z "$INFO" ]; then INFO="$1"; fi
 	echo "$INFO"
 	echo "$LOG_PREFIX:info:$INFO" >>$FILE_LOG
-	sleep $WAIT_AFTER_INFO
+	do_sleep $WAIT_AFTER_INFO
 }
 
 function debug()
@@ -120,7 +143,13 @@ work_begin()
 	TIME_START=
 	now
 	echo "$LOG_PREFIX:begin:$WORK_LEVEL" >$FILE_LOG
+	debug "begin work"
+	SCREENSHOT_ACTIVE=1
 	screenshots_clear
+	unset OPERATORS_CURSOR_FRAME
+	declare -A OPERATORS_CURSOR_FRAME
+	unset OPERATORS_CURSOR_POS
+	declare -A OPERATORS_CURSOR_POS
 	END_LAST_SOUND=0
 }
 
@@ -131,6 +160,8 @@ work_end()
 	if [ -n "$EXEC_ON_WORK_END" ]; then
 		$EXEC_ON_WORK_END
 	fi
+	SCREENSHOT_ACTIVE=0
+	screenshots_unique_operators
 }
 
 function view_operator()
@@ -144,7 +175,7 @@ function view_operator()
 		debug "switch to operator $OPERATOR"
 		now
 		echo "$LOG_PREFIX:goto_operator:$OPERATOR" >>$FILE_LOG
-		sleep $WAIT_CHANGE_OPERATOR
+		do_sleep $WAIT_CHANGE_OPERATOR
 		now
 		echo "$LOG_PREFIX:arrive_to_operator:$OPERATOR" >>$FILE_LOG
 	fi
@@ -180,7 +211,7 @@ function launch_terminal_on_new_session()
 {
 	SHELL_TERMINAL=tmux
 	launch_terminal
-	sleep 0.3
+	do_sleep 0.3
 }
 
 function tmux_set_option()
@@ -194,7 +225,7 @@ function launch_terminal_on_existing_session()
 	chmod +x /tmp/tutaut_tmux_command.sh
 	SHELL_TERMINAL="/tmp/tutaut_tmux_command.sh"
 	launch_terminal
-	sleep 0.3
+	do_sleep 0.3
 	rm /tmp/tutaut_tmux_command.sh
 }
 
@@ -261,17 +292,17 @@ function slow_down()
 
 function wait_after_space()
 {
-	sleep $WAIT_AFTER_SPACE
+	do_sleep $WAIT_AFTER_SPACE
 }
 
 function wait_before_enter()
 {
-	sleep $WAIT_BEFORE_ENTER
+	do_sleep $WAIT_BEFORE_ENTER
 }
 
 function wait_after_command()
 {
-	sleep $WAIT_AFTER_COMMAND
+	do_sleep $WAIT_AFTER_COMMAND
 }
 
 function wait_command_if_stopped()
@@ -285,13 +316,72 @@ function wait_command_if_stopped()
 screenshots_clear()
 {
 	rm -rf $DIR_SCREENSHOTS
+	screenshot_operators_size
+}
+
+screenshots_unique_operators()
+{
+	for OP in ${!OPERATORS[@]}; do
+		screenshots_unique_operator $OP
+	done
+}
+
+screenshots_unique_operator()
+{
+	OP_SCREENSHOT=${1:-$OPERATOR}
+	PATH_SCREENSHOTS_OPERATOR="$DIR_SCREENSHOTS/$OP_SCREENSHOT"
+	PREV_SHOT=
+	debug "screenshots_unique_operator $OP_SCREENSHOT"
+	for SHOT in $PATH_SCREENSHOTS_OPERATOR/??????.bw
+	do
+		if [ -z "$PREV_SHOT" ]; then
+			debug "screenshots_unique_operator   shot first $(basename $SHOT)"
+			PREV_SHOT=$SHOT
+		elif cmp -s $SHOT $PREV_SHOT; then
+			debug "screenshots_unique_operator     removed double shot $(basename $SHOT) with $(basename $PREV_SHOT)"
+			rm $SHOT
+		else
+			debug "screenshots_unique_operator   shot different $(basename $SHOT) $(basename $PREV_SHOT)"
+			PREV_SHOT=$SHOT
+		fi
+	done
+	PREV_SHOT=
+	for SHOT in $PATH_SCREENSHOTS_OPERATOR/??????.color
+	do
+		if [ -z "$PREV_SHOT" ]; then
+			debug "screenshots_unique_operator   shot first $(basename $SHOT)"
+			PREV_SHOT=$SHOT
+		elif cmp -s $SHOT $PREV_SHOT; then
+			debug "screenshots_unique_operator     removed double shot $(basename $SHOT) with $(basename $PREV_SHOT)"
+			rm $SHOT
+		else
+			debug "screenshots_unique_operator   shot different $(basename $SHOT) $(basename $PREV_SHOT)"
+			PREV_SHOT=$SHOT
+		fi
+	done
+}
+
+screenshot_operators_size()
+{
+	for OP in ${!OPERATORS[@]}; do
+		screenshot_operator_size $OP
+	done
+}
+
+screenshot_operator_size()
+{
+	OP_SCREENSHOT=${1:-$OPERATOR}
+	PANE_SIZE=$(tmux list-panes -t$OP_SCREENSHOT -F '#{pane_width}:#{pane_height}')
+	typed_log screensize $OP_SCREENSHOT:$PANE_SIZE
 }
 
 screenshot_operators()
 {
-	for OP in ${!OPERATORS[@]}; do
-		screenshot_operator $OP
-	done
+	if [ "$SCREENSHOT_ACTIVE" = 1 ]; then
+		for OP in ${!OPERATORS[@]}; do
+			screenshot_operator $OP
+		done
+	fi
 }
 
 screenshot_operator()
@@ -300,17 +390,46 @@ screenshot_operator()
 	FRAME_NUM_FORMATTED=$(printf "%06d" $FRAME_NUM)
 	PATH_SCREENSHOTS_OPERATOR="$DIR_SCREENSHOTS/$OP_SCREENSHOT"
 	mkdir -p $PATH_SCREENSHOTS_OPERATOR
-	PATH_SCREENSHOT="$PATH_SCREENSHOTS_OPERATOR/$FRAME_NUM_FORMATTED"
+
+	PATH_SCREENSHOT="$PATH_SCREENSHOTS_OPERATOR/$FRAME_NUM_FORMATTED.color"
 	if [ -f "$PATH_SCREENSHOT" ]; then
 		return
 	fi
+	FRAME_PREV_CURSOR=${OPERATORS_CURSOR_FRAME[$OP_SCREENSHOT]:-0}
+	if [ $FRAME_PREV_CURSOR -lt $FRAME_NUM ]; then
+		PANE_CURSOR=$(tmux list-panes -t$OP_SCREENSHOT -F '#{cursor_x}:#{cursor_y}')
+		POS_PREV_CURSOR=${OPERATORS_CURSOR_POS[$OP_SCREENSHOT]:-0}
+		if [ $POS_PREV_CURSOR != $PANE_CURSOR ]; then
+			PATH_CURSOR="$PATH_SCREENSHOTS_OPERATOR/$FRAME_PREV_SCREENSHOT.cursor"
+			#echo "$PANE_CURSOR" >$PATH_CURSOR
+			typed_log cursor $OP_SCREENSHOT:$PANE_CURSOR
+			OPERATORS_CURSOR_POS[$OP_SCREENSHOT]=$PANE_CURSOR
+			OPERATORS_CURSOR_FRAME[$OP_SCREENSHOT]=$FRAME_NUM
+		fi
+	fi
+	FRAME_PREV_SCREENSHOT=${OPERATORS_LAST_SHOT[$OP_SCREENSHOT]}
+	PATH_PREV_SCREENSHOT="$PATH_SCREENSHOTS_OPERATOR/$FRAME_PREV_SCREENSHOT.color"
+	tmux capture-pane -e -t$OP_SCREENSHOT
+	tmux save-buffer $PATH_SCREENSHOT
+	#if [ -n "$FRAME_PREV_SCREENSHOT" ] && cmp -s $PATH_PREV_SCREENSHOT $PATH_SCREENSHOT; then
+	#	rm -f $PATH_SCREENSHOT
+	#	debug "removed screenshot duplicated $FRAME_PREV_SCREENSHOT $FRAME_NUM_FORMATTED"
+	#	return
+	#else
+	#	OPERATORS_LAST_SHOT[$OP_SCREENSHOT]=$FRAME_NUM_FORMATTED
+	#	debug "not removed screenshot duplicated $LAST_TWO $# $(cmp $PATH_PREV_SCREENSHOT $PATH_SCREENSHOT)"
+	#fi
+
+	PATH_SCREENSHOT="$PATH_SCREENSHOTS_OPERATOR/$FRAME_NUM_FORMATTED.bw"
 	tmux capture-pane -t$OP_SCREENSHOT
 	tmux save-buffer $PATH_SCREENSHOT
-	typed_log screenshot $OP_SCREENSHOT
+
+	typed_log screenshot -p $OP_SCREENSHOT:$FRAME_NUM_FORMATTED
 }
 
 function wait_before_char()
 {
+	screenshot_operators
 	wait_command_if_stopped
 	[ -n "$STEP_ON" ] && debug "Step:$STEP_ON" && STEP_ON=$((STEP_ON-1)) && [ "$STEP_ON" -eq 0 ] && STOPPED=1
 	TRY_ON_100=$((RANDOM%100))
@@ -318,11 +437,10 @@ function wait_before_char()
 		WAIT_BEFORE_CHAR_AMOUNT=$((MIN_WAIT_CHAR+RANDOM))
 		[ $WAIT_BEFORE_CHAR_AMOUNT -gt $MAX_WAIT_CHAR ] && WAIT_BEFORE_CHAR_AMOUNT=$MAX_WAIT_CHAR
 		WAIT_BEFORE_CHAR_MS=$((WAIT_BEFORE_CHAR_AMOUNT%1000))
-		[ "$WAIT_BEFORE_CHAR_MS" -ne 0 ] && sleep 0.$WAIT_BEFORE_CHAR_MS
+		[ "$WAIT_BEFORE_CHAR_MS" -ne 0 ] && do_sleep 0.$WAIT_BEFORE_CHAR_MS
 	else
 		WAIT_BEFORE_CHAR_MS=0
 	fi
-	screenshot_operators
 }
 
 : "
@@ -403,7 +521,7 @@ function sound_button_press()
 			END_LAST_SOUND=$((TIME_ELAPSED+SOUND_BUTTON_PRESS_MS))
 		fi
 	fi
-	typed_log keyboard_button $OPERATOR:$2
+	typed_log keyboard_button $OPERATOR:"$2"
 }
 
 function sound_buttons_press()
@@ -426,7 +544,7 @@ function to_operator()
 	CH="$1"
 	debug "to_operator: $CH"
 	wait_before_char
-	if [ "$WAIT_BEFORE_CHAR_MS" -eq 0 -a 1 -eq 2 ];then
+	if [ "$WAIT_BEFORE_CHAR_MS" -eq 0 -a 1 -eq 1 ];then
 		BUFFER+="$CH"
 		debug "buffer: $BUFFER"
 	else
@@ -464,7 +582,7 @@ function to_operator_direct()
 			esac
 		else
 			debug "to_operator_direct: $DIRECT_CH"
-			if [ ${#DIRECT_CH} -gt 2 ]; then
+			if [ ${#DIRECT_CH} -gt 1 ]; then
 				sound_buttons_press "$DIRECT_CH"
 			else
 				sound_button_press 0 "$DIRECT_CH"
@@ -472,7 +590,7 @@ function to_operator_direct()
 			if [ "$DIRECT_CH" = ";" ]; then
 				DIRECT_CH="\\;"
 			fi
-			tmux send -t$OPERATOR -- "$DIRECT_CH"
+			tmux send -t$OPERATOR -l -- "$DIRECT_CH"
 		fi
 	else
 		echo -ne "$DIRECT_CH"
@@ -538,9 +656,9 @@ function send()
 		if [ "$CHAR" = " " ]; then
 			wait_after_space
 			send_flush
-		elif [ "$CHAR" = "/" -o "$CHAR" = "-" -o "$CHAR" = "." -o "$CHAR" = "_" ]; then
+		elif [ "/" = "$CHAR" -o "-" = "$CHAR" -o "." = "$CHAR" -o "_"  = "$CHAR" ]; then
 			send_flush
-		elif [ "$CHAR" = "" -o "$CHAR" = "\\h" ]; then
+		elif [ "" = "$CHAR" -o "\\h" = "$CHAR" ]; then
 			send_flush
 		elif [ "${CHAR:0:1}" = "\\" ]; then
 			send_flush
@@ -554,6 +672,7 @@ function scroll_lines()
 	HOW_MANY_LINES=${1:-3}
 	while [ "$HOW_MANY_LINES" -gt 0 ]; do
 		DONT_WAIT=1 send_command
+		do_sleep 0.2
 		HOW_MANY_LINES=$((HOW_MANY_LINES-1))
 	done
 }
@@ -627,6 +746,34 @@ function command_exec()
 	[0-9]) COMMAND_NUM=$COMMAND_NUM$COMMAND; debug "Num: $COMMAND_NUM";;
 	o) STEP_ON=${COMMAND_NUM:-1}; COMMAND_NUM= ; debug "Step on: $STEP_ON";;
 	esac
+}
+
+function do_sleepx()
+{
+	sleep $1
+}
+function do_sleep()
+{
+	SLEEP_SEC="$1"
+	#echo do_sleep $SLEEP_SEC
+	if [ "$SLEEP_SEC" = "${SLEEP_SEC/.}" ]; then
+		SLEEP_MS=$((SLEEP_SEC*1000))
+	else
+		SLEEP_MS=$(echo $SLEEP_SEC | sed -e 's/\.\(...\)$/\1/' -e 's/\.\(..\)$/\10/' -e 's/\.\(.\)$/\100/' -e 's/\.$/000/')
+	fi
+	while [ "$SLEEP_MS" != "${SLEEP_MS/#0}" ]; do
+		SLEEP_MS=${SLEEP_MS/#0}
+	done
+	#echo do_sleep $SLEEP_MS $SLEEP_SEC
+	now
+	#echo do_sleep_2 $SLEEP_MS $SLEEP_SEC
+	SLEEP_START=$TIME_NOW
+	SLEEP_END=$((TIME_NOW+SLEEP_MS))
+	while now; [ $TIME_NOW -lt $SLEEP_END ]; do
+		screenshot_operators
+		sleep 0.01
+	done
+	#echo $TIME_NOW $SLEEP_START $SLEEP_END $SLEEP_MS $SLEEP_SEC
 }
 
 function do_suspend()
@@ -754,6 +901,12 @@ function git_log()
 	send_command "git log --graph --oneline --decorate=short --all | cat"
 }
 
+function git_log_limited()
+{
+	NUMBER_COMMIT=${1:-5}
+	send_command "git log --graph --oneline --decorate=short --all -$NUMBER_COMMIT"
+}
+
 function git_status()
 {
 	send_command "git status"
@@ -798,7 +951,8 @@ function vi_change_line_from_cursor()
 
 function vi_delete_line()
 {
-	send "dd"
+	HOW_MANY=$1
+	send "${HOW_MANY}dd"
 }
 
 function vi_change_line()
@@ -813,12 +967,14 @@ function vi_go_line()
 
 function vi_up()
 {
-	send "k"
+	HOW_MANY=$1
+	send "${HOW_MANY}k"
 }
 
 function vi_down()
 {
-	send "j"
+	HOW_MANY=$1
+	send "${HOW_MANY}j"
 }
 
 function vi_save_and_close()
