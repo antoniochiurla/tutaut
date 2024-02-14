@@ -7,12 +7,14 @@ if [ -z "$TUTAUT" ]; then
 	#echo $PATH_TUTAUT
 	TUTAUT=1
 	[ -f set_default_values.sh ] && . set_default_values.sh
+	CLIENT_WIDTH=132
+	CLIENT_HEIGHT=35
 	DEFAULT_MIN_WAIT_CHAR=0
-	DEFAULT_MAX_WAIT_CHAR=300
-	DEFAULT_WAIT_AFTER_SPACE=0.5
-	DEFAULT_WAIT_BEFORE_ENTER=1.0
-	DEFAULT_WAIT_AFTER_COMMAND=2.0
-	DEFAULT_WAIT_CHANGE_OPERATOR=3.0
+	DEFAULT_MAX_WAIT_CHAR=200
+	DEFAULT_WAIT_AFTER_SPACE=0.3
+	DEFAULT_WAIT_BEFORE_ENTER=0.6
+	DEFAULT_WAIT_AFTER_COMMAND=1.0
+	DEFAULT_WAIT_CHANGE_OPERATOR=1.0
 	DEFAULT_WAIT_AFTER_INFO=3.0
 	DEFAULT_ERRORS_PERCENT=5
 	DEFAULT_LANGUAGE=IT
@@ -34,6 +36,7 @@ if [ -z "$TUTAUT" ]; then
 	ERRORS_PERCENT=$DEFAULT_ERRORS_PERCENT
 	VIDEO_FPS=25
 	OPERATOR=
+	COMMENT_NAME=comment
 	declare -A OPERATORS
 	declare -A OPERATORS_GEOMETRY
 	declare -A OPERATORS_SETUP_COMMAND
@@ -71,6 +74,7 @@ function now()
 	#TIME_NOW=$(date +%s%N)
 	TIME_NOW=${EPOCHREALTIME/%???}
 	TIME_NOW=${TIME_NOW/.}
+	#TIME_NOW=${TIME_NOW/,}
 	time_format
 }
 
@@ -104,6 +108,8 @@ function typed_log()
 # second argument for Italian language
 function info()
 {
+	ACTUAL_OPERATOR=$OPERATOR
+	view_operator $COMMENT_NAME
 	now
 	case "$LANGUAGE" in
 	EN)	INFO="$1";;
@@ -113,6 +119,7 @@ function info()
 	echo "$INFO"
 	echo "$LOG_PREFIX:info:$INFO" >>$FILE_LOG
 	do_sleep $WAIT_AFTER_INFO
+	view_operator $ACTUAL_OPERATOR
 }
 
 function debug()
@@ -174,6 +181,7 @@ function view_operator()
 	if [ "${OPERATOR}" != "$PREV_OPERATOR" ]; then
 		debug "switch to operator $OPERATOR"
 		now
+		tmux select-window -t $OPERATOR
 		echo "$LOG_PREFIX:goto_operator:$OPERATOR" >>$FILE_LOG
 		do_sleep $WAIT_CHANGE_OPERATOR
 		now
@@ -191,27 +199,12 @@ function select_operator()
 
 function create_operator()
 {
-	FOUND_SESSION=$(tmux list-sessions 2>/dev/null | cut -d":" -f1 | grep $OPERATOR)
-	if [ -z "${FOUND_SESSION}" ]; then
-		launch_terminal_on_new_session
-		FIRST_FREE_SESSION=$(tmux list-sessions | cut -d":" -f1 | grep "^[0-9]" | sort -n | head -1)
-		debug "renaming tmux session $FIRST_FREE_SESSION to $OPERATOR"
-		tmux rename-session -t$FIRST_FREE_SESSION $OPERATOR
-		tmux_set_option destroy-unattached on
-	#else
-	#	launch_terminal_on_existing_session $OPERATOR
-	fi
+	tmux new-window -S -n $OPERATOR
+	tmux resize-window -t $OPERATOR -x $CLIENT_WIDTH -y $CLIENT_HEIGHT
 	send
 	OPERATORS[$OPERATOR]=1
 	SETUP_COMMAND=${OPERATORS_SETUP_COMMAND[$OPERATOR]}
 	[ -n "$SETUP_COMMAND" ] && send_command "$SETUP_COMMAND"
-}
-
-function launch_terminal_on_new_session()
-{
-	SHELL_TERMINAL=tmux
-	launch_terminal
-	do_sleep 0.3
 }
 
 function tmux_set_option()
@@ -268,7 +261,7 @@ function speed_up()
 		WAIT_AFTER_SPACE=0
 		WAIT_BEFORE_ENTER=0
 		WAIT_AFTER_COMMAND=0.2
-		WAIT_CHANGE_OPERATOR=1.0
+		WAIT_CHANGE_OPERATOR=0.5
 		WAIT_AFTER_INFO=0.3
 		ERRORS_PERCENT=0
 		DO_PAUSE=
@@ -721,15 +714,23 @@ function command_check()
 		WAIT_COMMAND=$((NUM_WAIT_COMMAND%100000+100000))
 		ARG_READ_TIMEOUT=0.${WAIT_COMMAND:1}
 		debug "waiting command $ARG_READ_TIMEOUT"
-		read -t ${ARG_READ_TIMEOUT} COMMAND
+		read -t ${ARG_READ_TIMEOUT} COMMANDS
 	else
-		read -s -t 0.001 COMMAND
+		read -s -t 0.001 COMMANDS
 	fi
-	if [ -n "$COMMAND" ]; then
-		command_exec "$COMMAND"
+	if [ -n "$COMMANDS" ]; then
+		commands_exec
 		NUM_WAIT_COMMAND=1
 	fi
 	screenshot_operators
+}
+
+function commands_exec()
+{
+	for COMMAND in $(echo "$COMMANDS" | grep -o .)
+	do
+		command_exec
+	done
 }
 
 function command_exec()
@@ -987,9 +988,16 @@ function print_file()
 	send_command "cat $1"
 }
 
+tmux rename-window $COMMENT_NAME
+tmux resize-window -x $CLIENT_WIDTH -y $CLIENT_HEIGHT
+stty -echo
+
+clear
+
 now
 
 for SCRIPT in $@
 do
 	. "$SCRIPT"
 done
+stty echo
