@@ -12,8 +12,8 @@ if [ -n "$LEADER_SETUP_COMMAND" ]; then OPERATORS_SETUP_COMMAND[leader]=$LEADER_
 if [ -n "$DEV1_SETUP_COMMAND" ]; then OPERATORS_SETUP_COMMAND[dev1]=$DEV1_SETUP_COMMAND; fi
 if [ -n "$DEV2_SETUP_COMMAND" ]; then OPERATORS_SETUP_COMMAND[dev2]=$DEV2_SETUP_COMMAND; fi
 
-for OP in leader dev1 dev2; do operator $OP; clear_screen;done
-operator leader
+for OP in leader dev1 dev2; do view_operator $OP; clear_screen;done
+view_operator leader
 create_dir $BASE/public/project
 change_dir $BASE/public/project
 git_init
@@ -29,7 +29,7 @@ git_add src1
 git_commit
 git_push
 
-operator dev1
+view_operator dev1
 create_dir $BASE/dev1
 change_dir $BASE/dev1
 git_clone $BASE/public/project
@@ -45,7 +45,7 @@ git_add src1
 git_commit feature 1
 git_push
 
-operator dev2
+view_operator dev2
 create_dir $BASE/dev2
 change_dir $BASE/dev2
 git_clone $BASE/public/project
@@ -61,12 +61,12 @@ git_add src1
 git_commit feature 2
 git_push
 
-operator leader
+view_operator leader
 git_pull
 git_log
 print_file src1
 
-operator dev1
+view_operator dev1
 git_pull
 vi_open src1
 vi_search feature1
@@ -78,7 +78,7 @@ git_commit feature 1.1
 git_push
 
 speed_up
-operator dev2
+view_operator dev2
 vi_open src1
 vi_search feature2
 slow_down
@@ -90,7 +90,7 @@ git_pull_rebase
 git_push
 
 MAX_WAIT_CHAR=0
-operator leader
+view_operator leader
 git_pull
 git_log
 print_file src1

@@ -17,6 +17,7 @@ for OP in leader dev1 dev2
 do
 	view_operator $OP
 	send_command 'alias vim="vim -n"'
+	send_command 'BASE='$BASE
        	clear_screen
 done
 slow_down
@@ -25,14 +26,14 @@ work_begin
 
 view_operator leader
 info "Leader crea il repository centrale"
-create_dir $BASE/public/project
-change_dir $BASE/public/project
+create_dir \$BASE/public/project
+change_dir \$BASE/public/project
 git_init
 pause
 info "Crea la sua copia locale clonando il repository centrale"
-create_dir $BASE/leader
-change_dir $BASE/leader
-git_clone $BASE/public/project
+create_dir \$BASE/leader
+change_dir \$BASE/leader
+git_clone \$BASE/public/project
 change_dir project
 info "Imposta la sua identita'"
 git_config user.name "leader"
